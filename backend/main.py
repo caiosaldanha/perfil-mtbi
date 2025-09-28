@@ -3,16 +3,36 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional
 import os
+import time
 from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime, Boolean
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.exc import OperationalError
 from datetime import datetime
 import json
 
 # Database setup
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://mtbi_user:mtbi_password@localhost:5432/mtbi_db")
 
-engine = create_engine(DATABASE_URL)
+def create_db_engine():
+    """Create database engine with retry logic"""
+    max_retries = 30
+    retry_interval = 2
+    
+    for attempt in range(max_retries):
+        try:
+            engine = create_engine(DATABASE_URL)
+            # Test the connection
+            with engine.connect() as conn:
+                conn.execute("SELECT 1")
+            return engine
+        except OperationalError as e:
+            if attempt == max_retries - 1:
+                raise e
+            print(f"Database connection attempt {attempt + 1} failed, retrying in {retry_interval} seconds...")
+            time.sleep(retry_interval)
+
+engine = create_db_engine()
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
@@ -44,7 +64,7 @@ class ChatMessage(Base):
     timestamp = Column(DateTime, default=datetime.utcnow)
 
 # Create tables
-Base.metadata.create_all(bind=engine)
+# Note: Table creation moved to startup event to avoid timing issues
 
 # Pydantic models
 class UserCreate(BaseModel):
@@ -86,6 +106,19 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.on_event("startup")
+async def startup_event():
+    """Create database tables on startup"""
+    try:
+        # Wait a bit more to ensure database is completely ready
+        import asyncio
+        await asyncio.sleep(2)
+        Base.metadata.create_all(bind=engine)
+        print("Database tables created successfully")
+    except Exception as e:
+        print(f"Error creating database tables: {e}")
+        raise
 
 # Dependency to get database session
 def get_db():
