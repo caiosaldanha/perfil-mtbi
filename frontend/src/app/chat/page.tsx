@@ -3,24 +3,29 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 
+// Interface para a estrutura de uma mensagem
 interface Message {
   message: string;
   is_user: boolean;
   timestamp: string;
 }
 
+// Página de chat com a IA
 export default function Chat() {
+  // Estados para as mensagens, nova mensagem e roteador
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const router = useRouter();
   const messagesContainerRef = useRef<HTMLDivElement>(null);
 
+  // Função para rolar para o final do container de mensagens
   const scrollToBottom = () => {
     if (messagesContainerRef.current) {
       messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
     }
   };
 
+  // Função para carregar as mensagens do histórico
   const loadMessages = useCallback(async () => {
     const userId = localStorage.getItem('user_id');
     if (!userId) {
@@ -39,13 +44,14 @@ export default function Chat() {
         setMessages(data);
         scrollToBottom();
       } else {
-        // Handle error
+        // Lidar com erro
       }
     } catch (error) {
-      // Handle error
+      // Lidar com erro
     }
   }, [router]);
 
+  // Efeitos para carregar as mensagens e rolar para o final
   useEffect(() => {
     loadMessages();
   }, [loadMessages]);
@@ -54,6 +60,7 @@ export default function Chat() {
     scrollToBottom();
   }, [messages]);
 
+  // Função para lidar com o envio de uma nova mensagem
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMessage.trim()) return;
@@ -64,6 +71,7 @@ export default function Chat() {
       return;
     }
 
+    // Adiciona a mensagem do usuário à lista de mensagens
     const userMessage: Message = {
       message: newMessage,
       is_user: true,
@@ -73,6 +81,7 @@ export default function Chat() {
     setNewMessage('');
 
     try {
+      // Envia a mensagem para a API
       const response = await fetch('/api/send-message', {
         method: 'POST',
         headers: {
@@ -82,24 +91,25 @@ export default function Chat() {
       });
 
       if (response.ok) {
+        // Recarrega as mensagens para obter a resposta da IA
         setTimeout(loadMessages, 500);
       } else {
-        // Handle error
+        // Lidar com erro
       }
     } catch (error) {
-      // Handle error
+      // Lidar com erro
     }
   };
 
   return (
     <div className="flex h-screen bg-gray-100">
-      {/* Sidebar */}
+      {/* Sidebar (Histórico) */}
       <div className="w-64 bg-gray-800 text-white p-4 hidden md:flex flex-col">
         <h2 className="text-2xl font-bold mb-4">Histórico</h2>
-        {/* Chat history items will go here */}
+        {/* Itens do histórico de chat irão aqui */}
       </div>
 
-      {/* Main chat window */}
+      {/* Janela principal do chat */}
       <div className="flex-1 flex flex-col">
         <header className="bg-white p-4 border-b">
           <h1 className="text-2xl font-bold text-gray-800">Chat com IA</h1>

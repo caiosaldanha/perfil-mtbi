@@ -3,17 +3,21 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
+// Página de cadastro de usuário
 export default function Register() {
+  // Estados para o formulário
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
   const router = useRouter();
 
+  // Função para lidar com o envio do formulário
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
     try {
+      // Envia os dados do formulário para a API
       const response = await fetch('/api/register', {
         method: 'POST',
         headers: {
@@ -23,11 +27,13 @@ export default function Register() {
       });
 
       if (response.ok) {
+        // Se o usuário for criado com sucesso, armazena os dados no localStorage e redireciona para a página de teste
         const user = await response.json();
         localStorage.setItem('user_id', user.id);
         localStorage.setItem('user_name', user.name);
         router.push('/test');
       } else {
+        // Se houver erro, exibe a mensagem de erro
         const errorData = await response.json();
         setError(errorData.error || 'Falha ao criar usuário');
       }

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
+// Descrições para cada tipo de personalidade
 const descriptions: { [key: string]: string } = {
   'INTJ': 'O Arquiteto - Pensadores estratégicos e independentes',
   'INTP': 'O Pensador - Inovadores e lógicos solucionadores de problemas',
@@ -22,11 +23,14 @@ const descriptions: { [key: string]: string } = {
   'ESFP': 'O Animador - Pessoas espontâneas, enérgicas e entusiasmadas'
 };
 
+// Página de resultados do teste
 export default function Results() {
+  // Estados para o tipo de personalidade e descrição
   const [personalityType, setPersonalityType] = useState('');
   const [description, setDescription] = useState('');
   const router = useRouter();
 
+  // Efeito para buscar os dados do teste do localStorage
   useEffect(() => {
     const userId = localStorage.getItem('user_id');
     const pType = localStorage.getItem('personality_type');
@@ -48,6 +52,7 @@ export default function Results() {
           <p className="text-gray-700 mt-2">Parabéns por completar o teste!</p>
         </div>
 
+        {/* Card com o resultado do teste */}
         <div className="bg-white shadow-2xl rounded-xl p-10 text-center">
           <h1 className="text-7xl font-extrabold text-blue-600 mb-2">{personalityType}</h1>
           <h4 className="text-3xl font-semibold text-gray-800 mb-4">{description}</h4>
@@ -56,6 +61,7 @@ export default function Results() {
           </p>
         </div>
 
+        {/* Chamada para ação para o chat */}
         <div className="mt-10 text-center">
           <p className="text-xl text-gray-800 mb-4">Pronto para o próximo passo?</p>
           <button

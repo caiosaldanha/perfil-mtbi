@@ -3,19 +3,24 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
+// Interface para a estrutura de uma questão
 interface Question {
   id: number;
   text: string;
 }
 
+// Página do teste de personalidade
 export default function Test() {
+  // Estados para as questões, respostas e erros
   const [questions, setQuestions] = useState<Question[]>([]);
   const [answers, setAnswers] = useState<{ [key: number]: number }>({});
   const [error, setError] = useState('');
   const router = useRouter();
 
+  // Calcula o progresso do teste
   const progress = questions.length > 0 ? (Object.keys(answers).length / questions.length) * 100 : 0;
 
+  // Efeito para buscar as questões da API
   useEffect(() => {
     const userId = localStorage.getItem('user_id');
     if (!userId) {
@@ -40,10 +45,12 @@ export default function Test() {
     fetchQuestions();
   }, [router]);
 
+  // Função para lidar com a mudança de resposta
   const handleAnswerChange = (questionId: number, value: number) => {
     setAnswers((prev) => ({ ...prev, [questionId]: value }));
   };
 
+  // Função para lidar com o envio do formulário
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -54,17 +61,20 @@ export default function Test() {
       return;
     }
 
+    // Verifica se todas as questões foram respondidas
     if (Object.keys(answers).length !== questions.length) {
       setError('Por favor, responda todas as perguntas');
       return;
     }
 
+    // Formata as respostas para o formato esperado pela API
     const formattedAnswers = Object.keys(answers).map((questionId) => ({
       question_id: parseInt(questionId),
       answer: answers[parseInt(questionId)],
     }));
 
     try {
+      // Envia as respostas para a API
       const response = await fetch('/api/submit-test', {
         method: 'POST',
         headers: {
@@ -74,6 +84,7 @@ export default function Test() {
       });
 
       if (response.ok) {
+        // Se o teste for enviado com sucesso, armazena o tipo de personalidade e redireciona para a página de resultados
         const result = await response.json();
         localStorage.setItem('personality_type', result.personality_type);
         router.push('/results');
@@ -94,6 +105,7 @@ export default function Test() {
           <p className="text-gray-700 mt-2">Responda honestamente para obter o resultado mais preciso.</p>
         </div>
 
+        {/* Barra de progresso */}
         <div className="w-full bg-gray-200 rounded-full h-4 mb-8 overflow-hidden">
           <div className="bg-blue-600 h-4 rounded-full transition-all duration-500 ease-in-out" style={{ width: `${progress}%` }}></div>
         </div>

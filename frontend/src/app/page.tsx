@@ -2,14 +2,17 @@
 
 import { useRouter } from 'next/navigation';
 
+// Página inicial da aplicação
 export default function Home() {
   const router = useRouter();
 
   return (
     <main className="flex flex-col items-center justify-center min-h-[calc(100vh-80px)] py-2">
       <div className="text-center px-4">
+        {/* Título principal e subtítulo */}
         <h1 className="text-6xl font-extrabold text-gray-900 mb-4">Descubra-se</h1>
         <p className="text-2xl text-gray-700 mb-8">Faça o teste de personalidade MTBI e inicie sua jornada de autoconhecimento.</p>
+        {/* Botão de chamada para ação */}
         <button
           className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-10 rounded-full text-xl transition duration-300 ease-in-out transform hover:scale-105 shadow-lg"
           onClick={() => router.push('/register')}
@@ -18,6 +21,7 @@ export default function Home() {
         </button>
       </div>
 
+      {/* Seção de informações sobre o teste */}
       <div className="mt-24 w-full max-w-5xl px-4">
         <div className="bg-white shadow-2xl rounded-xl p-10">
           <h3 className="text-4xl font-bold mb-6 text-gray-900">O que é o Teste MTBI?</h3>
