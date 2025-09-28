@@ -1,10 +1,10 @@
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-from typing import List, Optional
+from pydantic import BaseModel, ConfigDict
+from typing import List
 import os
 import time
-from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime, Boolean
+from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime, Boolean, text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.exc import OperationalError
@@ -24,7 +24,7 @@ def create_db_engine():
             engine = create_engine(DATABASE_URL)
             # Test the connection
             with engine.connect() as conn:
-                conn.execute("SELECT 1")
+                conn.execute(text("SELECT 1"))
             return engine
         except OperationalError as e:
             if attempt == max_retries - 1:
@@ -72,6 +72,8 @@ class UserCreate(BaseModel):
     email: str
 
 class UserResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     name: str
     email: str
@@ -90,6 +92,8 @@ class ChatMessageCreate(BaseModel):
     message: str
 
 class ChatMessageResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     message: str
     is_user: bool
