@@ -1,15 +1,23 @@
-FROM python:3.11-slim
+# Use an official Node.js runtime as a parent image
+FROM node:18-alpine
 
-# Update system packages to address vulnerabilities
-RUN apt-get update && apt-get upgrade -y && apt-get clean
-
+# Set the working directory in the container
 WORKDIR /app
 
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Copy package.json and package-lock.json to the working directory
+COPY package*.json ./
 
+# Install any needed packages
+RUN npm install
+
+# Copy the rest of the application code to the working directory
 COPY . .
 
-EXPOSE 5000
+# Build the Next.js application
+RUN npm run build
 
-CMD ["python", "app.py"]
+# Expose port 3000
+EXPOSE 3000
+
+# Define the command to run the application
+CMD ["npm", "start"]
