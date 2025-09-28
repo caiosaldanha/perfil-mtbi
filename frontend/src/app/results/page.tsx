@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Navbar from '@/components/Navbar';
 
 // Descrições para cada tipo de personalidade
 const descriptions: { [key: string]: string } = {
@@ -45,33 +46,36 @@ export default function Results() {
   }, [router]);
 
   return (
-    <main className="flex flex-col items-center justify-center min-h-[calc(100vh-80px)] py-12 px-4">
-      <div className="w-full max-w-3xl">
-        <div className="text-center mb-8">
-          <h2 className="text-4xl font-bold text-gray-900">Seu Resultado</h2>
-          <p className="text-gray-700 mt-2">Parabéns por completar o teste!</p>
-        </div>
+    <>
+      <Navbar />
+      <main className="flex flex-col items-center justify-center min-h-[calc(100vh-80px)] py-12 px-4">
+        <div className="w-full max-w-3xl">
+          <div className="text-center mb-8">
+            <h2 className="text-4xl font-bold text-gray-900">Seu Resultado</h2>
+            <p className="text-gray-700 mt-2">Parabéns por completar o teste!</p>
+          </div>
 
-        {/* Card com o resultado do teste */}
-        <div className="bg-white shadow-2xl rounded-xl p-10 text-center">
-          <h1 className="text-7xl font-extrabold text-blue-600 mb-2">{personalityType}</h1>
-          <h4 className="text-3xl font-semibold text-gray-800 mb-4">{description}</h4>
-          <p className="text-gray-700 text-lg">
-            Este é o seu tipo de personalidade. Use esta informação para se conhecer melhor e explorar seus pontos fortes.
-          </p>
-        </div>
+          {/* Card com o resultado do teste */}
+          <div className="bg-white shadow-2xl rounded-xl p-10 text-center">
+            <h1 className="text-7xl font-extrabold text-blue-600 mb-2">{personalityType}</h1>
+            <h4 className="text-3xl font-semibold text-gray-800 mb-4">{description}</h4>
+            <p className="text-gray-700 text-lg">
+              Este é o seu tipo de personalidade. Use esta informação para se conhecer melhor e explorar seus pontos fortes.
+            </p>
+          </div>
 
-        {/* Chamada para ação para o chat */}
-        <div className="mt-10 text-center">
-          <p className="text-xl text-gray-800 mb-4">Pronto para o próximo passo?</p>
-          <button
-            className="bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-10 rounded-full text-xl transition duration-300 ease-in-out transform hover:scale-105 shadow-lg"
-            onClick={() => router.push('/chat')}
-          >
-            Converse com nossa IA
-          </button>
+          {/* Chamada para ação para o chat */}
+          <div className="mt-10 text-center">
+            <p className="text-xl text-gray-800 mb-4">Pronto para o próximo passo?</p>
+            <button
+              className="bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-10 rounded-full text-xl transition duration-300 ease-in-out transform hover:scale-105 shadow-lg"
+              onClick={() => router.push('/chat')}
+            >
+              Converse com nossa IA
+            </button>
+          </div>
         </div>
-      </div>
-    </main>
+      </main>
+    </>
   );
 }

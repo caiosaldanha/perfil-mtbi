@@ -102,57 +102,44 @@ export default function Chat() {
   };
 
   return (
-    <div className="flex h-screen bg-gray-100">
-      {/* Sidebar (Histórico) */}
-      <div className="w-64 bg-gray-800 text-white p-4 hidden md:flex flex-col">
-        <h2 className="text-2xl font-bold mb-4">Histórico</h2>
-        {/* Itens do histórico de chat irão aqui */}
-      </div>
+    <div className="flex flex-col h-screen bg-gray-100">
+      <header className="bg-white p-4 border-b shadow-sm">
+        <h1 className="text-2xl font-bold text-gray-800 text-center">Chat com IA</h1>
+      </header>
 
-      {/* Janela principal do chat */}
-      <div className="flex-1 flex flex-col">
-        <header className="bg-white p-4 border-b">
-          <h1 className="text-2xl font-bold text-gray-800">Chat com IA</h1>
-        </header>
-
-        <main ref={messagesContainerRef} className="flex-1 p-6 overflow-y-auto">
-          <div className="space-y-6">
-            {messages.map((msg, index) => (
-              <div key={index} className={`flex items-start gap-4 ${msg.is_user ? 'justify-end' : ''}`}>
-                {!msg.is_user && (
-                  <div className="w-10 h-10 rounded-full bg-gray-300 flex-shrink-0"></div>
-                )}
-                <div className={`p-4 rounded-lg max-w-lg ${msg.is_user ? 'bg-blue-500 text-white' : 'bg-white'}`}>
-                  <p>{msg.message}</p>
-                  <div className={`text-xs mt-1 ${msg.is_user ? 'text-blue-100' : 'text-gray-500'}`}>
-                    {new Date(msg.timestamp).toLocaleTimeString()}
-                  </div>
+      <main ref={messagesContainerRef} className="flex-1 p-6 overflow-y-auto">
+        <div className="space-y-6 max-w-4xl mx-auto">
+          {messages.map((msg, index) => (
+            <div key={index} className={`flex items-start gap-4 ${msg.is_user ? 'justify-end' : ''}`}>
+              <div className={`p-4 rounded-lg max-w-lg ${msg.is_user ? 'bg-blue-600 text-white' : 'bg-white shadow-md'}`}>
+                <p>{msg.message}</p>
+                <div className={`text-xs mt-1 ${msg.is_user ? 'text-blue-100' : 'text-gray-500'}`}>
+                  {new Date(msg.timestamp).toLocaleTimeString()}
                 </div>
-                {msg.is_user && (
-                  <div className="w-10 h-10 rounded-full bg-gray-300 flex-shrink-0"></div>
-                )}
               </div>
-            ))}
-          </div>
-        </main>
+            </div>
+          ))}
+        </div>
+      </main>
 
-        <footer className="bg-white p-4 border-t">
+      <footer className="bg-white p-4 border-t shadow-inner">
+        <div className="max-w-4xl mx-auto">
           <form onSubmit={handleSendMessage} className="flex items-center">
             <input
               type="text"
-              className="flex-grow border rounded-full py-3 px-4 mr-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="flex-grow border rounded-full py-3 px-5 mr-4 focus:outline-none focus:ring-2 focus:ring-blue-600 shadow-sm"
               placeholder="Digite sua mensagem..."
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
             />
-            <button type="submit" className="bg-blue-500 hover:bg-blue-600 text-white font-bold p-3 rounded-full transition duration-300 ease-in-out">
+            <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white font-bold p-3 rounded-full transition duration-300 ease-in-out shadow-lg">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M12 5l7 7-7 7" />
               </svg>
             </button>
           </form>
-        </footer>
-      </div>
+        </div>
+      </footer>
     </div>
   );
 }
