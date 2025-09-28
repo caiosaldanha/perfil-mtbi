@@ -1,168 +1,116 @@
-# MTBI Personality Test - AI Chat Application
+# Perfil MTBI - Teste de Personalidade e Chat com IA
 
-A comprehensive web application for psychological evaluation using the Myers-Briggs Type Indicator (MBTI) test, featuring an AI chat system to guide users through self-discovery.
+![License](https://img.shields.io/badge/license-MIT-blue.svg)
 
-## Overview
+## Tabela de Conteúdos
 
-This application consists of three independent services running in Docker containers:
+- [Sobre o Projeto](#sobre-o-projeto)
+- [Arquitetura](#arquitetura)
+- [Componentes do Frontend](#componentes-do-frontend)
+- [Começando](#começando)
+  - [Pré-requisitos](#pré-requisitos)
+  - [Instalação](#instalação)
+  - [Executando a Aplicação](#executando-a-aplicação)
+- [Tecnologias Utilizadas](#tecnologias-utilizadas)
+- [Contribuição](#contribuição)
+- [Licença](#licença)
 
-1. **Frontend (Flask)** - User interface for the MTBI test and AI chat
-2. **Backend (FastAPI)** - REST API for test processing and AI responses
-3. **Database (PostgreSQL)** - Data storage for users, test results, and chat messages
+## Sobre o Projeto
 
-## Features
+O Perfil MTBI é uma aplicação web que permite aos usuários realizar um teste de personalidade baseado no modelo Myers-Briggs Type Indicator (MBTI). Após a conclusão do teste, os usuários recebem seu tipo de personalidade e podem interagir com um chatbot de IA para obter mais informações e insights sobre seu perfil.
 
-- Complete MTBI personality test with 12 questions
-- Personality type calculation and results display
-- AI-powered chat system for self-discovery guidance
-- User registration and session management
-- Responsive web interface using Bootstrap
-- RESTful API with FastAPI
-- PostgreSQL database with proper relationships
+A aplicação é construída com uma arquitetura de microsserviços, com um backend em Python (FastAPI) e um frontend em Next.js (React) com Tailwind CSS.
 
-## Architecture
+## Arquitetura
 
+A arquitetura da aplicação é dividida em três componentes principais: o frontend, o backend e o banco de dados.
+
+```mermaid
+graph TD
+    A[Usuário] --> B{Frontend (Next.js)};
+    B --> C{Backend (FastAPI)};
+    C --> D[Banco de Dados (PostgreSQL)];
 ```
-Frontend (Flask:5000) → Backend (FastAPI:8000) → Database (PostgreSQL:5432)
+
+- **Frontend:** A interface do usuário é construída com Next.js e Tailwind CSS. É responsável por apresentar o teste, exibir os resultados e fornecer a interface de chat.
+- **Backend:** O backend é construído com Python e FastAPI. É responsável por toda a lógica de negócios, incluindo o gerenciamento de usuários, o processamento do teste e a interação com a IA do chat.
+- **Banco de Dados:** O banco de dados PostgreSQL é usado para armazenar informações sobre usuários, perguntas do teste, respostas e histórico de chat.
+
+## Componentes do Frontend
+
+O frontend é estruturado em vários componentes reutilizáveis para criar uma interface de usuário consistente e modular.
+
+```mermaid
+graph TD
+    A[Páginas] --> B(Layout);
+    B --> C[Navbar];
+    A --> D{Página de Início};
+    A --> E{Página de Cadastro};
+    A --> F{Página de Teste};
+    A --> G{Página de Resultados};
+    A --> H{Página de Chat};
 ```
 
-## Quick Start
+- **Navbar:** O componente de navegação principal, presente em todas as páginas, exceto na de chat.
+- **Páginas:** Cada página da aplicação é um componente React que lida com uma funcionalidade específica (início, cadastro, teste, resultados, chat).
 
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
+## Começando
+
+Para executar o projeto localmente, siga estas etapas.
+
+### Pré-requisitos
+
+- Docker
+- Docker Compose
+
+### Instalação
+
+1. Clone o repositório:
+   ```sh
+   git clone https://github.com/caiosaldanha/perfil-mtbi.git
+   ```
+2. Navegue até o diretório do projeto:
+   ```sh
    cd perfil-mtbi
    ```
 
-2. **Set up environment variables**
-   ```bash
-   cp .env.example .env
-   # Edit .env file if needed
+### Executando a Aplicação
+
+1. Execute o seguinte comando para construir e iniciar os contêineres Docker:
+   ```sh
+   docker compose up --build
    ```
+2. A aplicação estará disponível nos seguintes endereços:
+   - Frontend: [http://localhost:3000](http://localhost:3000)
+   - Backend: [http://localhost:8000/docs](http://localhost:8000/docs)
 
-3. **Start the application**
-   ```bash
-   docker-compose up --build
-   ```
+## Tecnologias Utilizadas
 
-4. **Access the application**
-   - Frontend: http://localhost:5000
-   - Backend API: http://localhost:8000
-   - API Documentation: http://localhost:8000/docs
+- **Frontend:**
+  - [Next.js](https://nextjs.org/)
+  - [React](https://reactjs.org/)
+  - [Tailwind CSS](https://tailwindcss.com/)
+  - [TypeScript](https://www.typescriptlang.org/)
 
-## Services
+- **Backend:**
+  - [Python](https://www.python.org/)
+  - [FastAPI](https://fastapi.tiangolo.com/)
+  - [PostgreSQL](https://www.postgresql.org/)
 
-### Frontend (Flask)
-- **Port**: 5000
-- **Technology**: Flask, Bootstrap, HTML/CSS/JavaScript
-- **Features**:
-  - User registration and authentication
-  - MTBI test interface
-  - Results display
-  - Real-time AI chat interface
+- **DevOps:**
+  - [Docker](https://www.docker.com/)
+  - [Docker Compose](https://docs.docker.com/compose/)
 
-### Backend (FastAPI)
-- **Port**: 8000
-- **Technology**: FastAPI, SQLAlchemy, PostgreSQL
-- **Features**:
-  - RESTful API endpoints
-  - MTBI test scoring algorithm
-  - AI response generation
-  - Database operations
+## Contribuição
 
-### Database (PostgreSQL)
-- **Port**: 5432
-- **Technology**: PostgreSQL 15
-- **Features**:
-  - User management
-  - Test results storage
-  - Chat message history
+As contribuições são o que tornam a comunidade de código aberto um lugar incrível para aprender, inspirar e criar. Quaisquer contribuições que você fizer serão **muito apreciadas**.
 
-## API Endpoints
+1. Faça um Fork do Projeto
+2. Crie sua Feature Branch (`git checkout -b feature/AmazingFeature`)
+3. Faça o Commit de suas alterações (`git commit -m 'Add some AmazingFeature'`)
+4. Faça o Push para a Branch (`git push origin feature/AmazingFeature`)
+5. Abra um Pull Request
 
-### Core Endpoints
-- `GET /` - API status
-- `GET /questions` - Get MTBI test questions
-- `POST /users` - Create new user
-- `POST /submit-test` - Submit test answers
-- `POST /chat` - Send chat message
-- `GET /chat/{user_id}` - Get chat history
-- `GET /users/{user_id}/personality` - Get user personality type
+## Licença
 
-## Database Schema
-
-### Tables
-- **users**: User information and authentication
-- **test_results**: MTBI test submissions and personality types
-- **chat_messages**: Chat conversation history
-
-## Development
-
-### Prerequisites
-- Docker and Docker Compose
-- Git
-
-### Local Development
-
-1. **Backend Development**
-   ```bash
-   cd backend
-   pip install -r requirements.txt
-   uvicorn main:app --reload
-   ```
-
-2. **Frontend Development**
-   ```bash
-   cd frontend
-   pip install -r requirements.txt
-   python app.py
-   ```
-
-3. **Database Setup**
-   ```bash
-   # Using PostgreSQL locally
-   createdb mtbi_db
-   psql mtbi_db < database/init.sql
-   ```
-
-### Testing
-
-Access the application:
-1. Visit http://localhost:5000
-2. Register a new user
-3. Complete the MTBI test
-4. View your personality type results
-5. Chat with the AI for self-discovery guidance
-
-## Environment Variables
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `POSTGRES_DB` | Database name | `mtbi_db` |
-| `POSTGRES_USER` | Database user | `mtbi_user` |
-| `POSTGRES_PASSWORD` | Database password | `mtbi_password` |
-| `DATABASE_URL` | Full database connection string | Generated from above |
-| `BACKEND_URL` | Backend API URL for frontend | `http://backend:8000` |
-| `FLASK_SECRET_KEY` | Flask session secret | Change in production |
-
-## MTBI Personality Types
-
-The application evaluates 16 personality types based on four dimensions:
-- **E**xtraversion vs **I**ntroversion
-- **S**ensing vs i**N**tuition
-- **T**hinking vs **F**eeling
-- **J**udging vs **P**erceiving
-
-Results: INTJ, INTP, ENTJ, ENTP, INFJ, INFP, ENFJ, ENFP, ISTJ, ISFJ, ESTJ, ESFJ, ISTP, ISFP, ESTP, ESFP
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test thoroughly
-5. Submit a pull request
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
+Distribuído sob a licença MIT. Veja `LICENSE` para mais informações.
