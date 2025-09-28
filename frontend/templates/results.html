@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="text-center mb-4">
+            <h2>Your Personality Type</h2>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-body text-center">
+                <h1 class="display-1 text-primary">{{ personality_type }}</h1>
+                <h4 class="card-title">{{ description }}</h4>
+                <p class="card-text mt-3">
+                    Congratulations! You've discovered your personality type. This is just the beginning 
+                    of your journey of self-discovery.
+                </p>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">What does this mean?</h5>
+                        <p class="card-text">
+                            Your {{ personality_type }} type gives insights into your natural preferences 
+                            and tendencies. Understanding these can help you in relationships, career 
+                            choices, and personal growth.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 mb-3">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">Continue Your Journey</h5>
+                        <p class="card-text">
+                            Chat with our AI to explore your personality type in depth and receive 
+                            personalized guidance for self-discovery and growth.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="text-center mt-4">
+            <a href="{{ url_for('chat') }}" class="btn btn-primary btn-lg">Start AI Chat</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
