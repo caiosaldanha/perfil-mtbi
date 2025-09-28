@@ -111,6 +111,9 @@ app.add_middleware(
 async def startup_event():
     """Create database tables on startup"""
     try:
+        # Wait a bit more to ensure database is completely ready
+        import asyncio
+        await asyncio.sleep(2)
         Base.metadata.create_all(bind=engine)
         print("Database tables created successfully")
     except Exception as e:
