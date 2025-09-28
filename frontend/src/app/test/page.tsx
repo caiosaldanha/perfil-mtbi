@@ -30,7 +30,7 @@ export default function Test() {
         } else {
           setError('Failed to fetch questions');
         }
-      } catch (error) {
+      } catch {
         setError('An unexpected error occurred');
       }
     };
@@ -79,7 +79,7 @@ export default function Test() {
         const errorData = await response.json();
         setError(errorData.error || 'Failed to submit test');
       }
-    } catch (error) {
+    } catch {
       setError('An unexpected error occurred');
     }
   };

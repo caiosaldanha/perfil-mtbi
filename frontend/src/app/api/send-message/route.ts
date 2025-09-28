@@ -19,7 +19,7 @@ export async function POST(request: Request) {
       const errorData = await backendResponse.json();
       return NextResponse.json({ error: errorData.detail || 'Failed to send message' }, { status: backendResponse.status });
     }
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: 'An unexpected error occurred' }, { status: 500 });
   }
 }

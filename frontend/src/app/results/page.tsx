@@ -52,7 +52,7 @@ export default function Results() {
             <h1 className="text-5xl font-bold text-blue-500">{personalityType}</h1>
             <h4 className="text-xl mt-2">{description}</h4>
             <p className="text-gray-700 mt-3">
-              Congratulations! You've discovered your personality type. This is just the beginning of your journey of self-discovery.
+              Congratulations! You&apos;ve discovered your personality type. This is just the beginning of your journey of self-discovery.
             </p>
           </div>
 

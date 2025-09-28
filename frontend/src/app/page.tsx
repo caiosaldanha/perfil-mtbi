@@ -26,7 +26,7 @@ export default function Home() {
               <li><strong>Judging (J) vs. Perceiving (P):</strong> How you approach the outside world</li>
             </ul>
             <p className="text-gray-700 mt-2">
-              After completing the test, you'll receive your personality type and can chat with our AI to explore what it means for your personal growth and self-understanding.
+              After completing the test, you&apos;ll receive your personality type and can chat with our AI to explore what it means for your personal growth and self-understanding.
             </p>
           </div>
 

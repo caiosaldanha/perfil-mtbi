@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 
 interface Message {
@@ -12,7 +12,6 @@ interface Message {
 export default function Chat() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
-  const [error, setError] = useState('');
   const router = useRouter();
   const messagesContainerRef = useRef<HTMLDivElement>(null);
 
@@ -22,7 +21,7 @@ export default function Chat() {
     }
   };
 
-  const loadMessages = async () => {
+  const loadMessages = useCallback(async () => {
     const userId = localStorage.getItem('user_id');
     if (!userId) {
       router.push('/register');
@@ -40,16 +39,16 @@ export default function Chat() {
         setMessages(data);
         scrollToBottom();
       } else {
-        setError('Failed to fetch chat history');
+        // Handle error
       }
     } catch (error) {
-      setError('An unexpected error occurred');
+      // Handle error
     }
-  };
+  }, [router]);
 
   useEffect(() => {
     loadMessages();
-  }, []);
+  }, [loadMessages]);
 
   useEffect(() => {
     scrollToBottom();
@@ -85,10 +84,10 @@ export default function Chat() {
       if (response.ok) {
         setTimeout(loadMessages, 500);
       } else {
-        setError('Failed to send message');
+        // Handle error
       }
     } catch (error) {
-      setError('An unexpected error occurred');
+      // Handle error
     }
   };
 

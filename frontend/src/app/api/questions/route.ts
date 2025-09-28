@@ -10,7 +10,7 @@ export async function GET() {
     } else {
       return NextResponse.json({ error: 'Failed to fetch questions' }, { status: backendResponse.status });
     }
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: 'An unexpected error occurred' }, { status: 500 });
   }
 }

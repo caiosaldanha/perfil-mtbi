@@ -31,7 +31,7 @@ export default function Register() {
         const errorData = await response.json();
         setError(errorData.error || 'Failed to create user');
       }
-    } catch (error) {
+    } catch {
       setError('An unexpected error occurred');
     }
   };

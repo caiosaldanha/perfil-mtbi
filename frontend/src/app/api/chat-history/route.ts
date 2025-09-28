@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { headers } from 'next/headers';
 
 export async function GET() {
-  const headersList = headers();
+  const headersList = await headers();
   const userId = headersList.get('user-id');
 
   if (!userId) {
@@ -18,7 +18,7 @@ export async function GET() {
     } else {
       return NextResponse.json({ error: 'Failed to fetch chat history' }, { status: backendResponse.status });
     }
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: 'An unexpected error occurred' }, { status: 500 });
   }
 }
