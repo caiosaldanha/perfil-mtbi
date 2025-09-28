@@ -1,13 +1,23 @@
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, ConfigDict
-from typing import List
+from pydantic import BaseModel, ConfigDict, field_validator
+from typing import Dict, List
 import os
 import time
-from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime, Boolean, text
+from sqlalchemy import (
+    create_engine,
+    Column,
+    Integer,
+    String,
+    Text,
+    DateTime,
+    Boolean,
+    ForeignKey,
+    text,
+)
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
-from sqlalchemy.exc import OperationalError
+from sqlalchemy.exc import IntegrityError, OperationalError
 from datetime import datetime
 import json
 
@@ -36,30 +46,149 @@ engine = create_db_engine()
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
-# Database models
+# Default question bank with scoring metadata.
+DEFAULT_QUESTIONS = [
+    {
+        "id": 1,
+        "text": "Eu me sinto energizado depois de passar tempo com outras pessoas.",
+        "dimension": "E/I",
+        "trait_high": "E",
+        "trait_low": "I",
+    },
+    {
+        "id": 2,
+        "text": "Prefiro reservar momentos de silêncio para recarregar após eventos sociais.",
+        "dimension": "E/I",
+        "trait_high": "I",
+        "trait_low": "E",
+    },
+    {
+        "id": 3,
+        "text": "Costumo explorar novas ideias e possibilidades antes de focar nos detalhes.",
+        "dimension": "S/N",
+        "trait_high": "N",
+        "trait_low": "S",
+    },
+    {
+        "id": 4,
+        "text": "Sinto-me mais confiante quando tenho dados concretos e fatos comprovados.",
+        "dimension": "S/N",
+        "trait_high": "S",
+        "trait_low": "N",
+    },
+    {
+        "id": 5,
+        "text": "Ao tomar decisões, priorizo a lógica e a objetividade.",
+        "dimension": "T/F",
+        "trait_high": "T",
+        "trait_low": "F",
+    },
+    {
+        "id": 6,
+        "text": "Levo em consideração como as pessoas serão afetadas antes de decidir algo.",
+        "dimension": "T/F",
+        "trait_high": "F",
+        "trait_low": "T",
+    },
+    {
+        "id": 7,
+        "text": "Gosto de planejar com antecedência e seguir cronogramas definidos.",
+        "dimension": "J/P",
+        "trait_high": "J",
+        "trait_low": "P",
+    },
+    {
+        "id": 8,
+        "text": "Prefiro manter minhas opções em aberto e ajustar o plano conforme necessário.",
+        "dimension": "J/P",
+        "trait_high": "P",
+        "trait_low": "J",
+    },
+    {
+        "id": 9,
+        "text": "Costumo iniciar conversas com desconhecidos com facilidade.",
+        "dimension": "E/I",
+        "trait_high": "E",
+        "trait_low": "I",
+    },
+    {
+        "id": 10,
+        "text": "Presto atenção em como os pequenos detalhes se conectam ao todo.",
+        "dimension": "S/N",
+        "trait_high": "S",
+        "trait_low": "N",
+    },
+    {
+        "id": 11,
+        "text": "Procuro reduzir conflitos para manter a harmonia nos relacionamentos.",
+        "dimension": "T/F",
+        "trait_high": "F",
+        "trait_low": "T",
+    },
+    {
+        "id": 12,
+        "text": "Sinto-me confortável fazendo ajustes de última hora no meu dia.",
+        "dimension": "J/P",
+        "trait_high": "P",
+        "trait_low": "J",
+    },
+]
+
+PERSONALITY_DESCRIPTIONS = {
+    "INTJ": "O Arquiteto - Pensadores estratégicos e independentes.",
+    "INTP": "O Pensador - Inovadores e lógicos solucionadores de problemas.",
+    "ENTJ": "O Comandante - Líderes ousados e de vontade forte.",
+    "ENTP": "O Debatedor - Pensadores inteligentes e curiosos.",
+    "INFJ": "O Advogado - Inspiradores criativos e perspicazes.",
+    "INFP": "O Mediador - Idealistas poéticos de bom coração.",
+    "ENFJ": "O Protagonista - Líderes carismáticos e inspiradores.",
+    "ENFP": "O Ativista - Espíritos livres entusiasmados e criativos.",
+    "ISTJ": "O Logístico - Indivíduos práticos e factuais.",
+    "ISFJ": "O Protetor - Protetores de coração caloroso e dedicados.",
+    "ESTJ": "O Executivo - Excelentes administradores e gerentes.",
+    "ESFJ": "O Cônsul - Pessoas extraordinariamente atenciosas e sociais.",
+    "ISTP": "O Virtuoso - Experimentadores ousados e práticos.",
+    "ISFP": "O Aventureiro - Artistas flexíveis e charmosos.",
+    "ESTP": "O Empreendedor - Pessoas inteligentes, enérgicas e perspicazes.",
+    "ESFP": "O Animador - Pessoas espontâneas, enérgicas e entusiasmadas.",
+}
+
+
+class Question(Base):
+    __tablename__ = "questions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    text = Column(Text, nullable=False)
+    dimension = Column(String(3), nullable=False)
+    trait_high = Column(String(1), nullable=False)
+    trait_low = Column(String(1), nullable=False)
+
+
 class User(Base):
     __tablename__ = "users"
-    
+
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, index=True)
-    email = Column(String, unique=True, index=True)
+    name = Column(String, index=True, nullable=False)
+    email = Column(String, unique=True, index=True, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
+
 
 class TestResult(Base):
     __tablename__ = "test_results"
-    
+
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, index=True)
-    personality_type = Column(String)  # MTBI type like INTJ, ENFP, etc.
-    answers = Column(Text)  # JSON string of answers
+    user_id = Column(Integer, ForeignKey("users.id"), index=True, nullable=False)
+    personality_type = Column(String, nullable=False)
+    answers = Column(Text, nullable=False)
     completed_at = Column(DateTime, default=datetime.utcnow)
+
 
 class ChatMessage(Base):
     __tablename__ = "chat_messages"
-    
+
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, index=True)
-    message = Column(Text)
+    user_id = Column(Integer, ForeignKey("users.id"), index=True, nullable=False)
+    message = Column(Text, nullable=False)
     is_user = Column(Boolean, default=True)
     timestamp = Column(DateTime, default=datetime.utcnow)
 
@@ -79,9 +208,24 @@ class UserResponse(BaseModel):
     email: str
     created_at: datetime
 
+class QuestionResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    text: str
+    dimension: str
+
+
 class QuestionAnswer(BaseModel):
     question_id: int
     answer: int  # 1-5 scale
+
+    @field_validator("answer")
+    @classmethod
+    def validate_answer(cls, value: int) -> int:
+        if not 1 <= value <= 5:
+            raise ValueError("Answer must be between 1 and 5.")
+        return value
 
 class TestSubmission(BaseModel):
     user_id: int
@@ -119,6 +263,8 @@ async def startup_event():
         import asyncio
         await asyncio.sleep(2)
         Base.metadata.create_all(bind=engine)
+        with SessionLocal() as session:
+            seed_questions(session)
         print("Database tables created successfully")
     except Exception as e:
         print(f"Error creating database tables: {e}")
@@ -132,54 +278,77 @@ def get_db():
     finally:
         db.close()
 
-# MTBI Test Questions
-MTBI_QUESTIONS = [
-    {"id": 1, "text": "I prefer to work alone rather than in groups.", "dimension": "E/I"},
-    {"id": 2, "text": "I focus on details and facts rather than possibilities.", "dimension": "S/N"},
-    {"id": 3, "text": "I make decisions based on logic rather than feelings.", "dimension": "T/F"},
-    {"id": 4, "text": "I prefer to have things planned and organized.", "dimension": "J/P"},
-    {"id": 5, "text": "I feel energized after spending time with others.", "dimension": "E/I"},
-    {"id": 6, "text": "I trust my intuition and gut feelings.", "dimension": "S/N"},
-    {"id": 7, "text": "I consider how decisions affect people's feelings.", "dimension": "T/F"},
-    {"id": 8, "text": "I like to keep my options open and be flexible.", "dimension": "J/P"},
-    {"id": 9, "text": "I enjoy meeting new people and socializing.", "dimension": "E/I"},
-    {"id": 10, "text": "I focus on the big picture rather than details.", "dimension": "S/N"},
-    {"id": 11, "text": "I value harmony and avoid conflict.", "dimension": "T/F"},
-    {"id": 12, "text": "I prefer structure and routine in my daily life.", "dimension": "J/P"},
-]
 
-def calculate_mtbi_type(answers: List[QuestionAnswer]) -> str:
-    """Calculate MTBI personality type based on answers"""
-    scores = {"E": 0, "I": 0, "S": 0, "N": 0, "T": 0, "F": 0, "J": 0, "P": 0}
-    
-    for answer in answers:
-        question = next((q for q in MTBI_QUESTIONS if q["id"] == answer.question_id), None)
+def seed_questions(session: Session) -> None:
+    """Ensure default MBTI questions are present and up to date."""
+    existing_questions: Dict[int, Question] = {
+        question.id: question for question in session.query(Question).all()
+    }
+    has_changes = False
+
+    for question_data in DEFAULT_QUESTIONS:
+        question = existing_questions.get(question_data["id"])
         if question:
-            dimension = question["dimension"]
-            if "/" in dimension:
-                dim1, dim2 = dimension.split("/")
-                # Higher scores (4-5) favor second dimension, lower scores (1-2) favor first
-                if answer.answer >= 4:
-                    scores[dim2] += answer.answer - 3
-                else:
-                    scores[dim1] += 3 - answer.answer
-    
-    # Determine personality type
+            for field in ("text", "dimension", "trait_high", "trait_low"):
+                if getattr(question, field) != question_data[field]:
+                    setattr(question, field, question_data[field])
+                    has_changes = True
+        else:
+            session.add(Question(**question_data))
+            has_changes = True
+
+    if has_changes:
+        session.commit()
+
+def calculate_mtbi_type(
+    answers: List[QuestionAnswer],
+    questions_by_id: Dict[int, Question],
+) -> Dict[str, Dict[str, int] | str]:
+    """Calculate MBTI personality type and provide score breakdown."""
+
+    trait_scores = {"E": 0, "I": 0, "S": 0, "N": 0, "T": 0, "F": 0, "J": 0, "P": 0}
+
+    for answer in answers:
+        question = questions_by_id.get(answer.question_id)
+        if not question:
+            raise HTTPException(status_code=400, detail=f"Invalid question id {answer.question_id}.")
+
+        if answer.answer >= 4:
+            trait_scores[question.trait_high] += answer.answer - 3
+        elif answer.answer <= 2:
+            trait_scores[question.trait_low] += 3 - answer.answer
+
     personality = ""
-    personality += "E" if scores["E"] > scores["I"] else "I"
-    personality += "S" if scores["S"] > scores["N"] else "N"
-    personality += "T" if scores["T"] > scores["F"] else "F"
-    personality += "J" if scores["J"] > scores["P"] else "P"
-    
-    return personality
+    for primary, secondary in (("E", "I"), ("S", "N"), ("T", "F"), ("J", "P")):
+        if trait_scores[primary] > trait_scores[secondary]:
+            personality += primary
+        elif trait_scores[secondary] > trait_scores[primary]:
+            personality += secondary
+        else:
+            # Resolve ties deterministically using the primary trait.
+            personality += primary
+
+    return {
+        "personality_type": personality,
+        "trait_scores": trait_scores,
+    }
 
 def generate_ai_response(user_message: str, personality_type: str = None) -> str:
     """Generate AI response based on user message and personality type"""
     # Simple rule-based responses for demonstration
+    personality_description = PERSONALITY_DESCRIPTIONS.get(
+        personality_type or "",
+        "Cada pessoa manifesta qualidades únicas; vamos explorar as suas juntas.",
+    )
+
     responses = {
-        "greeting": "Hello! I'm here to help you explore your personality and guide you on a journey of self-discovery. How are you feeling today?",
-        "personality": f"Based on your test results, you have an {personality_type} personality type. This means you tend to be...",
-        "default": "That's interesting. Tell me more about how that makes you feel. Understanding yourself better is a continuous journey."
+        "greeting": "Olá! Estou aqui para ajudar você a explorar sua personalidade. Como tem se sentido hoje?",
+        "personality": (
+            f"Seus resultados indicam o tipo {personality_type}. {personality_description}"
+            if personality_type
+            else "Conte-me um pouco mais sobre o seu resultado para que eu possa ajudar."
+        ),
+        "default": "Interessante! Conte mais para entendermos como isso se conecta com o seu estilo pessoal.",
     }
     
     message_lower = user_message.lower()
@@ -196,25 +365,62 @@ def generate_ai_response(user_message: str, personality_type: str = None) -> str
 async def root():
     return {"message": "MTBI Personality Test API"}
 
-@app.get("/questions")
-async def get_questions():
-    """Get all MTBI test questions"""
-    return MTBI_QUESTIONS
+@app.get("/questions", response_model=List[QuestionResponse])
+async def get_questions(db: Session = Depends(get_db)):
+    """Return the ordered list of MBTI questions from the database."""
+    questions = db.query(Question).order_by(Question.id).all()
+    return questions
 
 @app.post("/users", response_model=UserResponse)
 async def create_user(user: UserCreate, db: Session = Depends(get_db)):
     """Create a new user"""
     db_user = User(name=user.name, email=user.email)
     db.add(db_user)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=400, detail="E-mail já cadastrado.")
     db.refresh(db_user)
     return db_user
 
 @app.post("/submit-test")
 async def submit_test(test: TestSubmission, db: Session = Depends(get_db)):
     """Submit MTBI test answers and get personality type"""
+    if not test.answers:
+        raise HTTPException(status_code=400, detail="Respostas do teste são obrigatórias.")
+
+    user = db.query(User.id).filter(User.id == test.user_id).one_or_none()
+    if user is None:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado.")
+
+    question_ids = [answer.question_id for answer in test.answers]
+    if len(set(question_ids)) != len(question_ids):
+        raise HTTPException(status_code=400, detail="Há respostas duplicadas para a mesma pergunta.")
+
+    questions = db.query(Question).order_by(Question.id).all()
+    questions_by_id = {question.id: question for question in questions}
+
+    expected_ids = set(questions_by_id.keys())
+    provided_ids = set(question_ids)
+
+    missing_questions = sorted(expected_ids - provided_ids)
+    if missing_questions:
+        raise HTTPException(
+            status_code=400,
+            detail="Todas as perguntas devem ser respondidas antes de enviar o teste.",
+        )
+
+    unknown_questions = sorted(provided_ids - expected_ids)
+    if unknown_questions:
+        raise HTTPException(
+            status_code=400,
+            detail="Foram enviadas perguntas inválidas para o teste.",
+        )
+
     # Calculate personality type
-    personality_type = calculate_mtbi_type(test.answers)
+    result_summary = calculate_mtbi_type(test.answers, questions_by_id)
+    personality_type = result_summary["personality_type"]
     
     # Save test result
     test_result = TestResult(
@@ -228,8 +434,12 @@ async def submit_test(test: TestSubmission, db: Session = Depends(get_db)):
     
     return {
         "personality_type": personality_type,
-        "description": f"You have an {personality_type} personality type.",
-        "test_result_id": test_result.id
+        "description": PERSONALITY_DESCRIPTIONS.get(
+            personality_type,
+            "Use este resultado como ponto de partida para aprofundar seu autoconhecimento.",
+        ),
+        "test_result_id": test_result.id,
+        "trait_scores": result_summary["trait_scores"],
     }
 
 @app.post("/chat", response_model=ChatMessageResponse)
