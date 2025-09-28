@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import Navbar from '@/components/Navbar';
 
 // Interface para a estrutura de uma mensagem
 interface Message {
@@ -103,10 +104,7 @@ export default function Chat() {
 
   return (
     <div className="flex flex-col h-screen bg-gray-100">
-      <header className="bg-white p-4 border-b shadow-sm">
-        <h1 className="text-2xl font-bold text-gray-800 text-center">Chat com IA</h1>
-      </header>
-
+      <Navbar />
       <main ref={messagesContainerRef} className="flex-1 p-6 overflow-y-auto">
         <div className="space-y-6 max-w-4xl mx-auto">
           {messages.map((msg, index) => (
