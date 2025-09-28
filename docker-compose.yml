@@ -7,7 +7,8 @@ services:
     environment:
       - DATABASE_URL=postgresql://mtbi_user:mtbi_password@db:5432/mtbi_db
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     volumes:
       - ./backend:/app
     command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
@@ -37,6 +38,11 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mtbi_user -d mtbi_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
 volumes:
   postgres_data:
