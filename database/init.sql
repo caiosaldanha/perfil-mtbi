@@ -36,7 +36,6 @@ CREATE INDEX IF NOT EXISTS idx_chat_messages_user_id ON chat_messages(user_id);
 CREATE INDEX IF NOT EXISTS idx_chat_messages_timestamp ON chat_messages(timestamp);
 
 -- Insert some sample data (optional)
--- You can uncomment these lines if you want sample data
 
 -- INSERT INTO users (name, email) VALUES 
 --     ('John Doe', 'john.doe@example.com'),
