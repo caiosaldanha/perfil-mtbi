@@ -58,9 +58,9 @@ A arquitetura da aplicação é dividida em três componentes principais: o fron
 
 ```mermaid
 graph TD
-    A[Usuário] --> B{Frontend (Next.js)};
-    B --> C{Backend (FastAPI)};
-    C --> D[Banco de Dados (PostgreSQL)];
+    A["Usuário"] --> B{"Frontend (Next.js)"};
+    B --> C{"Backend (FastAPI)"};
+    C --> D["Banco de Dados (PostgreSQL)"];
 ```
 
 - **Frontend:** A interface do usuário é construída com Next.js e Tailwind CSS. É responsável por apresentar o teste, exibir os resultados e fornecer a interface de chat.
@@ -73,13 +73,13 @@ O frontend é estruturado em vários componentes reutilizáveis para criar uma i
 
 ```mermaid
 graph TD
-    A[Páginas] --> B(Layout);
-    B --> C[Navbar];
-    A --> D{Página de Início};
-    A --> E{Página de Cadastro};
-    A --> F{Página de Teste};
-    A --> G{Página de Resultados};
-    A --> H{Página de Chat};
+    A["Páginas"] --> B("Layout");
+    B --> C["Navbar"];
+    A --> D{"Página de Início"};
+    A --> E{"Página de Cadastro"};
+    A --> F{"Página de Teste"};
+    A --> G{"Página de Resultados"};
+    A --> H{"Página de Chat"};
 ```
 
 - **Navbar:** O componente de navegação principal, presente em todas as páginas, exceto na de chat.
@@ -102,7 +102,7 @@ Para executar o projeto localmente, siga estas etapas.
    ```
 2. Navegue até o diretório do projeto:
    ```sh
-   cd perfil-mtbi
+   cd perfil-mtBI
    ```
 
 ### Executando a Aplicação
