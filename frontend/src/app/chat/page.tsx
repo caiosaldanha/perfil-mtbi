@@ -92,45 +92,38 @@ export default function Chat() {
   };
 
   return (
-    <main className="container mx-auto p-4">
-      <div className="flex justify-center">
-        <div className="w-full max-w-2xl">
-          <div className="text-center mb-4">
-            <h2 className="text-2xl font-bold">AI Chat - Self Discovery Guide</h2>
-            <p className="text-gray-600">Explore your personality and receive personalized guidance</p>
+    <main className="flex flex-col items-center justify-center min-h-screen py-12">
+      <div className="w-full max-w-2xl px-4">
+        <div className="bg-white shadow-lg rounded-lg">
+          <div className="p-4 border-b bg-gray-50 rounded-t-lg">
+            <h5 className="font-bold text-lg text-gray-800">Chat com IA</h5>
+            <p className="text-sm text-gray-600">Sua jornada de autodescoberta continua</p>
           </div>
-
-          <div className="bg-white shadow-md rounded">
-            <div className="p-4 border-b">
-              <h5 className="font-bold">Chat with AI</h5>
-            </div>
-            <div ref={messagesContainerRef} className="p-4 h-96 overflow-y-auto">
-              {messages.map((msg, index) => (
-                <div key={index} className={`mb-2 ${msg.is_user ? 'text-right' : 'text-left'}`}>
-                  <div
-                    className={`inline-block p-2 rounded-lg max-w-xs ${msg.is_user ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}>
-                    {msg.message}
-                  </div>
-                  <div className="text-xs text-gray-500 mt-1">
+          <div ref={messagesContainerRef} className="p-6 h-96 overflow-y-auto space-y-4">
+            {messages.map((msg, index) => (
+              <div key={index} className={`flex ${msg.is_user ? 'justify-end' : 'justify-start'}`}>
+                <div className={`px-4 py-2 rounded-lg max-w-xs lg:max-w-md ${msg.is_user ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-800'}`}>
+                  <p>{msg.message}</p>
+                  <div className={`text-xs mt-1 ${msg.is_user ? 'text-blue-100' : 'text-gray-500'}`}>
                     {new Date(msg.timestamp).toLocaleTimeString()}
                   </div>
                 </div>
-              ))}
-            </div>
-            <div className="p-4 border-t">
-              <form onSubmit={handleSendMessage} className="flex">
-                <input
-                  type="text"
-                  className="flex-grow border rounded-l-lg p-2"
-                  placeholder="Type your message here..."
-                  value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
-                />
-                <button type="submit" className="bg-blue-500 hover:bg-blue-700 text-white font-bold p-2 rounded-r-lg">
-                  Send
-                </button>
-              </form>
-            </div>
+              </div>
+            ))}
+          </div>
+          <div className="p-4 border-t bg-gray-50 rounded-b-lg">
+            <form onSubmit={handleSendMessage} className="flex items-center">
+              <input
+                type="text"
+                className="flex-grow border rounded-full py-3 px-4 mr-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Digite sua mensagem..."
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
+              />
+              <button type="submit" className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-full transition duration-300 ease-in-out">
+                Enviar
+              </button>
+            </form>
           </div>
         </div>
       </div>

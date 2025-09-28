@@ -4,22 +4,22 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 const descriptions: { [key: string]: string } = {
-  'INTJ': 'The Architect - Strategic and independent thinkers',
-  'INTP': 'The Thinker - Innovative and logical problem-solvers',
-  'ENTJ': 'The Commander - Bold and strong-willed leaders',
-  'ENTP': 'The Debater - Smart and curious thinkers',
-  'INFJ': 'The Advocate - Creative and insightful inspirers',
-  'INFP': 'The Mediator - Poetic and kind-hearted idealists',
-  'ENFJ': 'The Protagonist - Charismatic and inspiring leaders',
-  'ENFP': 'The Campaigner - Enthusiastic and creative free spirits',
-  'ISTJ': 'The Logistician - Practical and fact-minded individuals',
-  'ISFJ': 'The Protector - Warm-hearted and dedicated protectors',
-  'ESTJ': 'The Executive - Excellent administrators and managers',
-  'ESFJ': 'The Consul - Extraordinarily caring and social people',
-  'ISTP': 'The Virtuoso - Bold and practical experimenters',
-  'ISFP': 'The Adventurer - Flexible and charming artists',
-  'ESTP': 'The Entrepreneur - Smart, energetic and perceptive people',
-  'ESFP': 'The Entertainer - Spontaneous, energetic and enthusiastic people'
+  'INTJ': 'O Arquiteto - Pensadores estratégicos e independentes',
+  'INTP': 'O Pensador - Inovadores e lógicos solucionadores de problemas',
+  'ENTJ': 'O Comandante - Líderes ousados e de vontade forte',
+  'ENTP': 'O Debatedor - Pensadores inteligentes e curiosos',
+  'INFJ': 'O Advogado - Inspiradores criativos e perspicazes',
+  'INFP': 'O Mediador - Idealistas poéticos de bom coração',
+  'ENFJ': 'O Protagonista - Líderes carismáticos e inspiradores',
+  'ENFP': 'O Ativista - Espíritos livres entusiasmados e criativos',
+  'ISTJ': 'O Logístico - Indivíduos práticos e factuais',
+  'ISFJ': 'O Protetor - Protetores de coração caloroso e dedicados',
+  'ESTJ': 'O Executivo - Excelentes administradores e gerentes',
+  'ESFJ': 'O Cônsul - Pessoas extraordinariamente atenciosas e sociais',
+  'ISTP': 'O Virtuoso - Experimentadores ousados e práticos',
+  'ISFP': 'O Aventureiro - Artistas flexíveis e charmosos',
+  'ESTP': 'O Empreendedor - Pessoas inteligentes, enérgicas e perspicazes',
+  'ESFP': 'O Animador - Pessoas espontâneas, enérgicas e entusiasmadas'
 };
 
 export default function Results() {
@@ -37,48 +37,33 @@ export default function Results() {
     }
 
     setPersonalityType(pType);
-    setDescription(descriptions[pType] || 'Unknown personality type');
+    setDescription(descriptions[pType] || 'Tipo de personalidade desconhecido');
   }, [router]);
 
   return (
-    <main className="container mx-auto p-4">
-      <div className="flex justify-center">
-        <div className="w-full max-w-2xl">
-          <div className="text-center mb-4">
-            <h2 className="text-2xl font-bold">Your Personality Type</h2>
-          </div>
+    <main className="flex flex-col items-center justify-center min-h-screen py-12">
+      <div className="w-full max-w-3xl px-4">
+        <div className="text-center mb-8">
+          <h2 className="text-3xl font-bold text-gray-800">Seu Resultado</h2>
+          <p className="text-gray-600">Parabéns por completar o teste!</p>
+        </div>
 
-          <div className="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4 text-center">
-            <h1 className="text-5xl font-bold text-blue-500">{personalityType}</h1>
-            <h4 className="text-xl mt-2">{description}</h4>
-            <p className="text-gray-700 mt-3">
-              Congratulations! You&apos;ve discovered your personality type. This is just the beginning of your journey of self-discovery.
-            </p>
-          </div>
+        <div className="bg-white shadow-lg rounded-lg p-8 text-center">
+          <h1 className="text-6xl font-extrabold text-blue-500 mb-2">{personalityType}</h1>
+          <h4 className="text-2xl font-semibold text-gray-700 mb-4">{description}</h4>
+          <p className="text-gray-600">
+            Este é o seu tipo de personalidade. Use esta informação para se conhecer melhor e explorar seus pontos fortes.
+          </p>
+        </div>
 
-          <div className="grid md:grid-cols-2 gap-4 mb-4">
-            <div className="bg-white shadow-md rounded p-4">
-              <h5 className="font-bold">What does this mean?</h5>
-              <p className="text-gray-700">
-                Your {personalityType} type gives insights into your natural preferences and tendencies. Understanding these can help you in relationships, career choices, and personal growth.
-              </p>
-            </div>
-            <div className="bg-white shadow-md rounded p-4">
-              <h5 className="font-bold">Continue Your Journey</h5>
-              <p className="text-gray-700">
-                Chat with our AI to explore your personality type in depth and receive personalized guidance for self-discovery and growth.
-              </p>
-            </div>
-          </div>
-
-          <div className="text-center mt-4">
-            <button
-              className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
-              onClick={() => router.push('/chat')}
-            >
-              Start AI Chat
-            </button>
-          </div>
+        <div className="mt-8 text-center">
+          <p className="text-lg text-gray-700 mb-4">Pronto para o próximo passo?</p>
+          <button
+            className="bg-green-500 hover:bg-green-600 text-white font-bold py-4 px-8 rounded-full text-lg transition duration-300 ease-in-out transform hover:scale-105"
+            onClick={() => router.push('/chat')}
+          >
+            Converse com nossa IA
+          </button>
         </div>
       </div>
     </main>
