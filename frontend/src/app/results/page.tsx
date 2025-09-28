@@ -41,25 +41,25 @@ export default function Results() {
   }, [router]);
 
   return (
-    <main className="flex flex-col items-center justify-center min-h-screen py-12">
-      <div className="w-full max-w-3xl px-4">
+    <main className="flex flex-col items-center justify-center min-h-[calc(100vh-80px)] py-12 px-4">
+      <div className="w-full max-w-3xl">
         <div className="text-center mb-8">
-          <h2 className="text-3xl font-bold text-gray-800">Seu Resultado</h2>
-          <p className="text-gray-600">Parabéns por completar o teste!</p>
+          <h2 className="text-4xl font-bold text-gray-900">Seu Resultado</h2>
+          <p className="text-gray-700 mt-2">Parabéns por completar o teste!</p>
         </div>
 
-        <div className="bg-white shadow-lg rounded-lg p-8 text-center">
-          <h1 className="text-6xl font-extrabold text-blue-500 mb-2">{personalityType}</h1>
-          <h4 className="text-2xl font-semibold text-gray-700 mb-4">{description}</h4>
-          <p className="text-gray-600">
+        <div className="bg-white shadow-2xl rounded-xl p-10 text-center">
+          <h1 className="text-7xl font-extrabold text-blue-600 mb-2">{personalityType}</h1>
+          <h4 className="text-3xl font-semibold text-gray-800 mb-4">{description}</h4>
+          <p className="text-gray-700 text-lg">
             Este é o seu tipo de personalidade. Use esta informação para se conhecer melhor e explorar seus pontos fortes.
           </p>
         </div>
 
-        <div className="mt-8 text-center">
-          <p className="text-lg text-gray-700 mb-4">Pronto para o próximo passo?</p>
+        <div className="mt-10 text-center">
+          <p className="text-xl text-gray-800 mb-4">Pronto para o próximo passo?</p>
           <button
-            className="bg-green-500 hover:bg-green-600 text-white font-bold py-4 px-8 rounded-full text-lg transition duration-300 ease-in-out transform hover:scale-105"
+            className="bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-10 rounded-full text-xl transition duration-300 ease-in-out transform hover:scale-105 shadow-lg"
             onClick={() => router.push('/chat')}
           >
             Converse com nossa IA
