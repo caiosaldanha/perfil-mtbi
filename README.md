@@ -5,6 +5,7 @@
 ## Tabela de Conteúdos
 
 - [Sobre o Projeto](#sobre-o-projeto)
+- [O Teste MBTI e o Processo de Recrutamento](#o-teste-mbti-e-o-processo-de-recrutamento)
 - [Arquitetura](#arquitetura)
 - [Componentes do Frontend](#componentes-do-frontend)
 - [Começando](#começando)
@@ -20,6 +21,36 @@
 O Perfil MTBI é uma aplicação web que permite aos usuários realizar um teste de personalidade baseado no modelo Myers-Briggs Type Indicator (MBTI). Após a conclusão do teste, os usuários recebem seu tipo de personalidade e podem interagir com um chatbot de IA para obter mais informações e insights sobre seu perfil.
 
 A aplicação é construída com uma arquitetura de microsserviços, com um backend em Python (FastAPI) e um frontend em Next.js (React) com Tailwind CSS.
+
+## O Teste MBTI e o Processo de Recrutamento
+
+O uso de testes de personalidade como o MBTI no processo de recrutamento e seleção é um tópico amplamente debatido. É crucial entender tanto os benefícios potenciais quanto as críticas e limitações dessa abordagem.
+
+### Benefícios Potenciais
+
+- **Melhor Compreensão do Candidato:** Os testes de personalidade podem fornecer insights sobre as preferências e tendências comportamentais de um candidato, ajudando a entender como ele pode se encaixar na cultura da empresa e em uma equipe específica.
+- **Melhora da Dinâmica da Equipe:** Ao entender os diferentes tipos de personalidade dentro de uma equipe, os gestores podem tomar decisões mais informadas sobre como montar equipes equilibradas e produtivas.
+- **Ferramenta de Desenvolvimento:** O MBTI pode ser uma ferramenta valiosa para o desenvolvimento pessoal e profissional, ajudando os funcionários a entenderem seus próprios pontos fortes e fracos.
+
+### Críticas e Limitações
+
+- **Validade Científica Questionável:** Muitos psicólogos e pesquisadores questionam a validade e a confiabilidade do MBTI como uma ferramenta científica para prever o desempenho no trabalho.
+- **Simplificação Excessiva:** O teste categoriza as pessoas em 16 tipos de personalidade, o que pode ser uma simplificação excessiva da complexidade da personalidade humana.
+- **Risco de Discriminação:** O uso indevido de testes de personalidade pode levar à discriminação e à exclusão de candidatos qualificados com base em seus traços de personalidade.
+
+### Nossa Abordagem
+
+Nesta aplicação, o teste MBTI **não é utilizado como uma ferramenta de seleção excludente**, mas sim como um ponto de partida para uma conversa mais profunda e para o autoconhecimento do candidato. Acreditamos que, quando usado de forma ética e responsável, o MBTI pode ser uma ferramenta poderosa para:
+
+- **Facilitar o Diálogo:** O resultado do teste pode ser usado como um guia para a entrevista, permitindo que o recrutador faça perguntas mais direcionadas e entenda melhor as motivações e preferências do candidato.
+- **Promover o Autoconhecimento:** A aplicação incentiva os candidatos a explorarem seus próprios resultados e a refletirem sobre como seus traços de personalidade podem se manifestar no ambiente de trabalho.
+- **Foco no Desenvolvimento:** O chat com a IA é projetado para ser um guia de autodescoberta, ajudando os usuários a entenderem seu tipo de personalidade e a identificarem áreas para o desenvolvimento pessoal e profissional.
+
+### Referências
+
+- [Should personality assessments be used in hiring? - The Myers-Briggs Company](https://www.themyersbriggs.com/en-US/Access-Resources/Articles/2023/November/Should-personality-assessments-be-used-in-hiring)
+- [Never Use the MBTI Assessment for Hiring or Selection - ATD](https://www.td.org/content/atd-blog/never-use-the-mbti-assessment-for-hiring-or-selection)
+- [Skeptical 'Deep Dive' on the Myers-Briggs Test - Psychological Science](https://www.psychologicalscience.org/news/releases/2021-utc-myers-briggs.html)
 
 ## Arquitetura
 
