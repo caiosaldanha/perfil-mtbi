@@ -8,7 +8,7 @@ const Navbar = () => {
       <div className="container mx-auto flex justify-between items-center border-b border-gray-200 pb-4">
         {/* Logo da aplicação */}
         <Link href="/" className="text-gray-800 text-2xl font-bold">
-          MTBI
+          MBTI
         </Link>
         {/* Links de navegação */}
         <div className="flex space-x-6 items-center">
