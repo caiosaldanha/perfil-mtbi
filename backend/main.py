@@ -22,6 +22,10 @@ from datetime import datetime
 import json
 from functools import lru_cache
 import threading
+from alembic.config import Config
+from alembic import command
+from alembic.runtime.environment import EnvironmentContext
+from alembic.script import ScriptDirectory
 
 # Database setup
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://mtbi_user:mtbi_password@localhost:5432/mtbi_db")
@@ -320,55 +324,28 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-def verify_and_update_schema(db_session: Session) -> None:
+def run_alembic_migrations() -> None:
     """
-    Verify database schema matches models and apply necessary migrations.
+    Run database migrations using Alembic.
     
-    This system supports multiple schema changes through a generic migration framework.
-    Each migration is defined with check_query, migration_query, and description.
+    This replaces the hardcoded migration system with a professional
+    database migration framework that supports versioning, rollbacks,
+    and complex schema changes.
     """
-    print("Checking database schema alignment...")
+    print("Running Alembic database migrations...")
     
-    # Define migrations as a list of dicts with 'check_query', 'migration_query', and 'description'
-    migrations = [
-        {
-            "description": "test_sessions.test_result_id column",
-            "check_query": "SELECT test_result_id FROM test_sessions LIMIT 1",
-            "migration_query": "ALTER TABLE test_sessions ADD COLUMN test_result_id INTEGER REFERENCES test_results(id) ON DELETE SET NULL",
-            "missing_error": "does not exist",
-        },
-        # Add future migrations here as needed
-        # Example:
-        # {
-        #     "description": "users.email_verified column",
-        #     "check_query": "SELECT email_verified FROM users LIMIT 1",
-        #     "migration_query": "ALTER TABLE users ADD COLUMN email_verified BOOLEAN DEFAULT FALSE",
-        #     "missing_error": "does not exist",
-        # },
-    ]
-    
-    # Execute migrations sequentially
-    for migration in migrations:
-        try:
-            # Try to execute the check query
-            db_session.execute(text(migration["check_query"]))
-            print(f"✓ {migration['description']} verified")
-        except Exception as e:
-            if migration["missing_error"] in str(e):
-                print(f"⚠ Missing {migration['description']}, applying migration...")
-                db_session.rollback()
-                try:
-                    db_session.execute(text(migration["migration_query"]))
-                    db_session.commit()
-                    print(f"✓ Successfully applied migration for {migration['description']}")
-                except Exception as migration_error:
-                    print(f"✗ Failed to apply migration for {migration['description']}: {migration_error}")
-                    db_session.rollback()
-                    raise
-            else:
-                print(f"✗ Schema verification failed for {migration['description']}: {e}")
-                db_session.rollback()
-                raise
+    try:
+        # Configure Alembic
+        alembic_cfg = Config("alembic.ini")
+        alembic_cfg.set_main_option("sqlalchemy.url", DATABASE_URL)
+        
+        # Run migrations to latest version
+        command.upgrade(alembic_cfg, "head")
+        print("✓ Database migrations completed successfully")
+        
+    except Exception as e:
+        print(f"✗ Failed to run migrations: {e}")
+        raise
 
 
 @app.on_event("startup")
@@ -382,9 +359,8 @@ async def startup_event():
         # Create tables first
         Base.metadata.create_all(bind=engine)
         
-        with SessionLocal() as session:
-            # Verify and update schema if needed
-            verify_and_update_schema(session)
+        # Run Alembic migrations
+        run_alembic_migrations()
             
             # Seed questions in a fresh session after schema verification
             
