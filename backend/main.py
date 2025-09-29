@@ -377,9 +377,9 @@ async def startup_event():
         
         # Run Alembic migrations
         run_alembic_migrations()
-            
-            # Seed questions in a fresh session after schema verification
-            
+        
+        # Seed questions in a fresh session after schema verification
+        
         with SessionLocal() as session:
             seed_questions(session)
             
