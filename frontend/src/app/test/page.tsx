@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect, useMemo, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 
@@ -137,7 +137,7 @@ function TestPageContent() {
     });
   }, [session?.trait_scores]);
 
-  const startSession = async (restart = false) => {
+  const startSession = useCallback(async (restart = false) => {
     const userId = localStorage.getItem('user_id');
     if (!userId) {
       router.push('/register');
@@ -173,13 +173,30 @@ function TestPageContent() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [router]);
 
   useEffect(() => {
     const restart = searchParams.get('restart') === 'true';
     startSession(restart);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const [autoRestartRequested, setAutoRestartRequested] = useState(false);
+
+  const isSessionInconsistent = !loading && session && session.status !== 'completed' && !session.question;
+
+  useEffect(() => {
+    if (session?.question || session?.status === 'completed') {
+      setAutoRestartRequested(false);
+    }
+  }, [session?.question, session?.status]);
+
+  useEffect(() => {
+    if (isSessionInconsistent && !autoRestartRequested) {
+      setAutoRestartRequested(true);
+      startSession(true);
+    }
+  }, [isSessionInconsistent, autoRestartRequested, startSession]);
 
   useEffect(() => {
     if (session?.status === 'completed' && session.personality_type) {
@@ -387,6 +404,14 @@ function TestPageContent() {
                       <div className="flex flex-col gap-3 md:flex-row">
                         <button
                           type="button"
+                          onClick={handleRestart}
+                          disabled={loading || isSubmitting}
+                          className="rounded-full border border-orange-300 px-6 py-2 font-semibold text-orange-600 transition hover:border-orange-400 hover:bg-orange-50 disabled:cursor-not-allowed disabled:border-gray-300 disabled:text-gray-400"
+                        >
+                          Recomeçar teste
+                        </button>
+                        <button
+                          type="button"
                           onClick={handleRewind}
                           disabled={session.answered.length === 0 || isSubmitting}
                           className="rounded-full border border-blue-600 px-6 py-2 font-semibold text-blue-600 transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:border-gray-300 disabled:text-gray-400"
@@ -403,6 +428,20 @@ function TestPageContent() {
                         </button>
                       </div>
                     </div>
+                  </div>
+                ) : isSessionInconsistent ? (
+                  <div className="mt-6 space-y-4 text-center">
+                    <p className="text-lg text-gray-700">
+                      Não conseguimos carregar a próxima pergunta. Estamos preparando um novo teste para você.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => startSession(true)}
+                      disabled={loading || isSubmitting}
+                      className="rounded-full bg-blue-600 px-6 py-2 font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-400"
+                    >
+                      Tentar novamente agora
+                    </button>
                   </div>
                 ) : (
                   <div className="mt-6 text-center">

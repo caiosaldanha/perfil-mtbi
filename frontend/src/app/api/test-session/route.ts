@@ -1,5 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getBackendUrl } from '@/utils/backend';
+import {
+  extractBackendError,
+  isRecord,
+  normalizeBackendMessage,
+  readBackendPayload,
+} from '@/utils/apiProxy';
 
 export async function POST(request: NextRequest) {
   const payload = await request.json();
@@ -15,15 +21,24 @@ export async function POST(request: NextRequest) {
       cache: 'no-store',
     });
 
+    const backendPayload = await readBackendPayload(backendResponse);
+
     if (!backendResponse.ok) {
-      const errorData = await backendResponse.json();
-      return NextResponse.json({ error: errorData.detail || 'Falha ao iniciar sessão de teste' }, { status: backendResponse.status });
+      const fallback = 'Não foi possível iniciar o teste.';
+      const message = normalizeBackendMessage(extractBackendError(backendPayload), fallback);
+      return NextResponse.json({ error: message }, { status: backendResponse.status });
     }
 
-    const data = await backendResponse.json();
-    return NextResponse.json(data);
+    if (!isRecord(backendPayload)) {
+      const fallback = 'Recebemos uma resposta inesperada do servidor do teste.';
+      const message = normalizeBackendMessage(extractBackendError(backendPayload), fallback);
+      return NextResponse.json({ error: message }, { status: 502 });
+    }
+
+    return NextResponse.json(backendPayload);
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Erro inesperado ao criar sessão de teste';
+    const fallback = 'Não foi possível conectar ao servidor de testes. Tente novamente.';
+    const message = error instanceof Error ? normalizeBackendMessage(error.message, fallback) : fallback;
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

@@ -1,5 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getBackendUrl } from '@/utils/backend';
+import {
+  extractBackendError,
+  isRecord,
+  normalizeBackendMessage,
+  readBackendPayload,
+} from '@/utils/apiProxy';
 
 interface RouteParams {
   sessionId: string;
@@ -20,15 +26,24 @@ export async function POST(request: NextRequest, context: { params: Promise<Rout
       cache: 'no-store',
     });
 
+    const backendPayload = await readBackendPayload(backendResponse);
+
     if (!backendResponse.ok) {
-      const errorData = await backendResponse.json();
-      return NextResponse.json({ error: errorData.detail || 'Falha ao registrar resposta' }, { status: backendResponse.status });
+      const fallback = 'Não foi possível registrar a resposta.';
+      const message = normalizeBackendMessage(extractBackendError(backendPayload), fallback);
+      return NextResponse.json({ error: message }, { status: backendResponse.status });
     }
 
-    const data = await backendResponse.json();
-    return NextResponse.json(data);
+    if (!isRecord(backendPayload)) {
+      const fallback = 'Recebemos uma resposta inesperada ao registrar sua resposta.';
+      const message = normalizeBackendMessage(extractBackendError(backendPayload), fallback);
+      return NextResponse.json({ error: message }, { status: 502 });
+    }
+
+    return NextResponse.json(backendPayload);
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Erro inesperado ao registrar resposta';
+    const fallback = 'Não foi possível registrar a resposta no servidor. Tente novamente.';
+    const message = error instanceof Error ? normalizeBackendMessage(error.message, fallback) : fallback;
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
