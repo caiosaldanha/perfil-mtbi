@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict, field_validator
-from typing import Dict, List
+from typing import Any, Dict, List, Optional
 import os
 import time
 from sqlalchemy import (
@@ -192,6 +192,21 @@ class ChatMessage(Base):
     is_user = Column(Boolean, default=True)
     timestamp = Column(DateTime, default=datetime.utcnow)
 
+
+class TestSession(Base):
+    __tablename__ = "test_sessions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), index=True, nullable=False)
+    status = Column(String, default="in_progress", nullable=False)
+    current_index = Column(Integer, default=0, nullable=False)
+    answers = Column(Text, default="[]", nullable=False)
+    question_order = Column(Text, nullable=False)
+    test_result_id = Column(Integer, ForeignKey("test_results.id"), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    completed_at = Column(DateTime, nullable=True)
+
 # Create tables
 # Note: Table creation moved to startup event to avoid timing issues
 
@@ -214,6 +229,8 @@ class QuestionResponse(BaseModel):
     id: int
     text: str
     dimension: str
+    trait_high: str
+    trait_low: str
 
 
 class QuestionAnswer(BaseModel):
@@ -243,6 +260,52 @@ class ChatMessageResponse(BaseModel):
     is_user: bool
     timestamp: datetime
 
+
+class TestSessionCreate(BaseModel):
+    user_id: int
+    restart: bool = False
+
+
+class TestSessionAnswer(BaseModel):
+    question_id: int
+    answer: int
+
+    @field_validator("answer")
+    @classmethod
+    def validate_answer(cls, value: int) -> int:
+        if not 1 <= value <= 5:
+            raise ValueError("Answer must be between 1 and 5.")
+        return value
+
+
+class AnsweredQuestion(BaseModel):
+    question_id: int
+    answer: int
+    dimension: str
+
+
+class TestSessionResponse(BaseModel):
+    id: int
+    user_id: int
+    status: str
+    current_index: int
+    total_questions: int
+    answers_count: int
+    question: Optional[QuestionResponse]
+    answered: List[AnsweredQuestion]
+    personality_type: Optional[str] = None
+    trait_scores: Optional[Dict[str, int]] = None
+    completed_at: Optional[datetime] = None
+    test_result_id: Optional[int] = None
+
+
+class TestResultSummary(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    personality_type: str
+    completed_at: datetime
+
 # FastAPI app
 app = FastAPI(title="MTBI Personality Test API", version="1.0.0")
 
@@ -255,19 +318,60 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+def verify_and_update_schema(db_session: Session) -> None:
+    """Verify database schema matches models and apply necessary migrations."""
+    print("Checking database schema alignment...")
+    
+    # Check if test_result_id column exists in test_sessions table
+    try:
+        # Simple test query to check if column exists
+        db_session.execute(text("SELECT test_result_id FROM test_sessions LIMIT 1"))
+        print("✓ test_sessions.test_result_id column verified")
+    except Exception as e:
+        if "does not exist" in str(e):
+            print("⚠ Missing test_result_id column, applying migration...")
+            # Rollback any failed transaction first
+            db_session.rollback()
+            try:
+                # Add the missing column with foreign key constraint
+                db_session.execute(text(
+                    "ALTER TABLE test_sessions ADD COLUMN test_result_id INTEGER REFERENCES test_results(id) ON DELETE SET NULL"
+                ))
+                db_session.commit()
+                print("✓ Successfully added test_result_id column to test_sessions")
+            except Exception as migration_error:
+                print(f"✗ Failed to add test_result_id column: {migration_error}")
+                db_session.rollback()
+                raise
+        else:
+            print(f"✗ Schema verification failed: {e}")
+            db_session.rollback()
+            raise
+
+
 @app.on_event("startup")
 async def startup_event():
-    """Create database tables on startup"""
+    """Create database tables and verify schema on startup"""
     try:
         # Wait a bit more to ensure database is completely ready
         import asyncio
         await asyncio.sleep(2)
+        
+        # Create tables first
         Base.metadata.create_all(bind=engine)
+        
+        with SessionLocal() as session:
+            # Verify and update schema if needed
+            verify_and_update_schema(session)
+            
+            # Seed questions in a fresh session after schema verification
+            
         with SessionLocal() as session:
             seed_questions(session)
-        print("Database tables created successfully")
+            
+        print("Database initialization completed successfully")
     except Exception as e:
-        print(f"Error creating database tables: {e}")
+        print(f"Error during database initialization: {e}")
         raise
 
 # Dependency to get database session
@@ -299,6 +403,152 @@ def seed_questions(session: Session) -> None:
 
     if has_changes:
         session.commit()
+
+
+def load_json_array(raw: Optional[str]) -> List[Any]:
+    if not raw:
+        return []
+    try:
+        data = json.loads(raw)
+        if isinstance(data, list):
+            return data
+    except json.JSONDecodeError:
+        pass
+    return []
+
+
+def get_ordered_questions(db: Session) -> List[Question]:
+    questions = db.query(Question).order_by(Question.id).all()
+    if not questions:
+        raise HTTPException(status_code=400, detail="Questionário indisponível. Consulte o administrador.")
+    return questions
+
+
+def ensure_user_exists(db: Session, user_id: int) -> User:
+    user = db.query(User).filter(User.id == user_id).one_or_none()
+    if user is None:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado.")
+    return user
+
+
+def ensure_session_alignment(
+    db: Session,
+    session_obj: TestSession,
+    questions: List[Question],
+) -> TestSession:
+    """Normalize question order, answers and index so the session always exposes a next question."""
+
+    valid_question_ids = {question.id for question in questions}
+    original_order = load_json_array(session_obj.question_order)
+    filtered_order = [question_id for question_id in original_order if question_id in valid_question_ids]
+    changed = False
+
+    if not filtered_order and questions:
+        filtered_order = [question.id for question in questions]
+        session_obj.answers = json.dumps([])
+        session_obj.current_index = 0
+        session_obj.status = "in_progress"
+        session_obj.completed_at = None
+        session_obj.test_result_id = None
+        changed = True
+    elif len(filtered_order) != len(original_order):
+        changed = True
+
+    if filtered_order != original_order:
+        session_obj.question_order = json.dumps(filtered_order)
+
+    answers_raw = load_json_array(session_obj.answers)
+    filtered_answers = [
+        answer
+        for answer in answers_raw
+        if isinstance(answer, dict)
+        and answer.get("question_id") in valid_question_ids
+        and isinstance(answer.get("answer"), int)
+    ]
+
+    if len(filtered_answers) != len(answers_raw):
+        session_obj.answers = json.dumps(filtered_answers)
+        changed = True
+
+    answers_count = len(filtered_answers)
+    if session_obj.current_index < answers_count:
+        session_obj.current_index = answers_count
+        changed = True
+
+    if session_obj.current_index > len(filtered_order):
+        session_obj.current_index = len(filtered_order)
+        changed = True
+
+    if (
+        session_obj.status == "in_progress"
+        and filtered_order
+        and session_obj.current_index >= len(filtered_order)
+    ):
+        session_obj.status = "completed"
+        session_obj.completed_at = session_obj.completed_at or datetime.utcnow()
+        changed = True
+
+    if changed:
+        session_obj.updated_at = datetime.utcnow()
+        db.commit()
+        db.refresh(session_obj)
+
+    return session_obj
+
+
+def build_session_response(session_obj: TestSession, questions: List[Question]) -> TestSessionResponse:
+    question_order = load_json_array(session_obj.question_order)
+    answers_raw = load_json_array(session_obj.answers)
+    questions_by_id = {question.id: question for question in questions}
+    total_questions = len(question_order)
+    answers_count = len(answers_raw)
+
+    next_question: Optional[QuestionResponse] = None
+    if (
+        session_obj.status == "in_progress"
+        and session_obj.current_index < total_questions
+    ):
+        next_question_id = question_order[session_obj.current_index]
+        question_obj = questions_by_id.get(next_question_id)
+        if question_obj:
+            next_question = QuestionResponse.model_validate(question_obj)
+
+    answered_items: List[AnsweredQuestion] = []
+    for answer_data in answers_raw:
+        question = questions_by_id.get(answer_data.get("question_id"))
+        if question:
+            answered_items.append(
+                AnsweredQuestion(
+                    question_id=question.id,
+                    answer=int(answer_data.get("answer", 0)),
+                    dimension=question.dimension,
+                )
+            )
+
+    trait_scores: Optional[Dict[str, int]] = None
+    personality_type: Optional[str] = None
+    result_summary = None
+    if answers_raw:
+        answers_models = [QuestionAnswer(**item) for item in answers_raw]
+        result_summary = calculate_mtbi_type(answers_models, questions_by_id)
+        trait_scores = result_summary["trait_scores"]
+        if session_obj.status == "completed":
+            personality_type = result_summary["personality_type"]
+
+    return TestSessionResponse(
+        id=session_obj.id,
+        user_id=session_obj.user_id,
+        status=session_obj.status,
+        current_index=session_obj.current_index,
+        total_questions=total_questions,
+        answers_count=answers_count,
+        question=next_question,
+        answered=answered_items,
+        personality_type=personality_type,
+        trait_scores=trait_scores,
+        completed_at=session_obj.completed_at,
+        test_result_id=session_obj.test_result_id,
+    )
 
 def calculate_mtbi_type(
     answers: List[QuestionAnswer],
@@ -383,6 +633,188 @@ async def create_user(user: UserCreate, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="E-mail já cadastrado.")
     db.refresh(db_user)
     return db_user
+
+
+@app.post("/test-session", response_model=TestSessionResponse)
+async def create_or_resume_test_session(
+    session_data: TestSessionCreate,
+    db: Session = Depends(get_db),
+):
+    """Create a new test session or resume an active one."""
+
+    seed_questions(db)
+    ensure_user_exists(db, session_data.user_id)
+    questions = get_ordered_questions(db)
+
+    if session_data.restart:
+        active_sessions = db.query(TestSession).filter(
+            TestSession.user_id == session_data.user_id,
+            TestSession.status == "in_progress",
+        ).all()
+        for active in active_sessions:
+            active.status = "cancelled"
+            active.updated_at = datetime.utcnow()
+        if active_sessions:
+            db.commit()
+
+    if not session_data.restart:
+        existing_session = (
+            db.query(TestSession)
+            .filter(
+                TestSession.user_id == session_data.user_id,
+                TestSession.status == "in_progress",
+            )
+            .order_by(TestSession.updated_at.desc())
+            .first()
+        )
+        if existing_session:
+            ensure_session_alignment(db, existing_session, questions)
+            response = build_session_response(existing_session, questions)
+            if response.question is None and response.status != "completed":
+                existing_session.status = "cancelled"
+                existing_session.updated_at = datetime.utcnow()
+                db.commit()
+                db.refresh(existing_session)
+            else:
+                return response
+
+    question_order = [question.id for question in questions]
+    new_session = TestSession(
+        user_id=session_data.user_id,
+        status="in_progress",
+        current_index=0,
+        answers=json.dumps([]),
+        question_order=json.dumps(question_order),
+    )
+    db.add(new_session)
+    db.commit()
+    db.refresh(new_session)
+
+    ensure_session_alignment(db, new_session, questions)
+    new_session_response = build_session_response(new_session, questions)
+
+    if new_session_response.question is None:
+        raise HTTPException(
+            status_code=500,
+            detail="Não foi possível preparar a primeira pergunta do teste.",
+        )
+
+    return new_session_response
+
+
+def get_session_or_404(db: Session, session_id: int) -> TestSession:
+    session_obj = db.query(TestSession).filter(TestSession.id == session_id).one_or_none()
+    if session_obj is None:
+        raise HTTPException(status_code=404, detail="Sessão de teste não encontrada.")
+    return session_obj
+
+
+@app.get("/test-session/{session_id}", response_model=TestSessionResponse)
+async def get_test_session(session_id: int, db: Session = Depends(get_db)):
+    """Retrieve the current state of a test session."""
+
+    session_obj = get_session_or_404(db, session_id)
+    questions = get_ordered_questions(db)
+    ensure_session_alignment(db, session_obj, questions)
+    return build_session_response(session_obj, questions)
+
+
+@app.post("/test-session/{session_id}/answer", response_model=TestSessionResponse)
+async def answer_test_question(
+    session_id: int,
+    answer_payload: TestSessionAnswer,
+    db: Session = Depends(get_db),
+):
+    """Submit an answer for the next question in the session."""
+
+    session_obj = get_session_or_404(db, session_id)
+    if session_obj.status != "in_progress":
+        raise HTTPException(status_code=400, detail="Esta sessão já foi finalizada.")
+
+    questions = get_ordered_questions(db)
+    session_obj = ensure_session_alignment(db, session_obj, questions)
+    question_order = load_json_array(session_obj.question_order)
+    total_questions = len(question_order)
+
+    if session_obj.current_index >= total_questions:
+        raise HTTPException(status_code=400, detail="Todas as perguntas já foram respondidas.")
+
+    expected_question_id = question_order[session_obj.current_index]
+    if answer_payload.question_id != expected_question_id:
+        raise HTTPException(status_code=400, detail="Questão enviada fora de sequência.")
+
+    answers_raw = load_json_array(session_obj.answers)
+    answers_raw.append(
+        {"question_id": answer_payload.question_id, "answer": answer_payload.answer}
+    )
+
+    session_obj.answers = json.dumps(answers_raw)
+    session_obj.current_index += 1
+    session_obj.updated_at = datetime.utcnow()
+
+    if session_obj.current_index >= total_questions:
+        session_obj.status = "completed"
+        session_obj.completed_at = datetime.utcnow()
+
+        answers_models = [QuestionAnswer(**item) for item in answers_raw]
+        questions_by_id = {question.id: question for question in questions}
+        result_summary = calculate_mtbi_type(answers_models, questions_by_id)
+
+        test_result = TestResult(
+            user_id=session_obj.user_id,
+            personality_type=result_summary["personality_type"],
+            answers=json.dumps(answers_raw),
+        )
+        db.add(test_result)
+        db.flush()
+        session_obj.test_result_id = test_result.id
+
+    db.commit()
+    db.refresh(session_obj)
+
+    questions = get_ordered_questions(db)
+    return build_session_response(session_obj, questions)
+
+
+@app.post("/test-session/{session_id}/rewind", response_model=TestSessionResponse)
+async def rewind_last_answer(session_id: int, db: Session = Depends(get_db)):
+    """Undo the last answer, allowing the user to revisar a pergunta."""
+
+    session_obj = get_session_or_404(db, session_id)
+    if session_obj.status != "in_progress":
+        raise HTTPException(status_code=400, detail="A sessão não pode ser editada.")
+
+    questions = get_ordered_questions(db)
+    session_obj = ensure_session_alignment(db, session_obj, questions)
+
+    answers_raw = load_json_array(session_obj.answers)
+    if not answers_raw:
+        return build_session_response(session_obj, questions)
+
+    answers_raw.pop()
+    session_obj.answers = json.dumps(answers_raw)
+    session_obj.current_index = max(session_obj.current_index - 1, 0)
+    session_obj.updated_at = datetime.utcnow()
+
+    db.commit()
+    db.refresh(session_obj)
+
+    ensure_session_alignment(db, session_obj, questions)
+    return build_session_response(session_obj, questions)
+
+
+@app.get("/users/{user_id}/test-results", response_model=List[TestResultSummary])
+async def list_user_test_results(user_id: int, db: Session = Depends(get_db)):
+    """Return all completed test results for a user."""
+
+    ensure_user_exists(db, user_id)
+    results = (
+        db.query(TestResult)
+        .filter(TestResult.user_id == user_id)
+        .order_by(TestResult.completed_at.desc())
+        .all()
+    )
+    return results
 
 @app.post("/submit-test")
 async def submit_test(test: TestSubmission, db: Session = Depends(get_db)):
