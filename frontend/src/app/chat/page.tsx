@@ -11,11 +11,14 @@ interface Message {
   timestamp: string;
 }
 
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
+
 // Página de chat com a IA
 export default function Chat() {
   // Estados para as mensagens, nova mensagem e roteador
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
+  const [openaiApiKey, setOpenaiApiKey] = useState('');
   const router = useRouter();
   const messagesContainerRef = useRef<HTMLDivElement>(null);
 
@@ -35,20 +38,16 @@ export default function Chat() {
     }
 
     try {
-      const response = await fetch('/api/chat-history', {
-        headers: {
-          'user-id': userId,
-        },
-      });
+      const response = await fetch(`${BACKEND_URL}/chat/${userId}`);
       if (response.ok) {
         const data = await response.json();
         setMessages(data);
         scrollToBottom();
       } else {
-        // Lidar com erro
+        console.error('Failed to load messages');
       }
-    } catch {
-      // Lidar com erro
+    } catch (error) {
+      console.error('Error loading messages:', error);
     }
   }, [router]);
 
@@ -72,7 +71,6 @@ export default function Chat() {
       return;
     }
 
-    // Adiciona a mensagem do usuário à lista de mensagens
     const userMessage: Message = {
       message: newMessage,
       is_user: true,
@@ -82,8 +80,7 @@ export default function Chat() {
     setNewMessage('');
 
     try {
-      // Envia a mensagem para a API
-      const response = await fetch('/api/send-message', {
+      const response = await fetch(`${BACKEND_URL}/chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -92,13 +89,43 @@ export default function Chat() {
       });
 
       if (response.ok) {
-        // Recarrega as mensagens para obter a resposta da IA
-        setTimeout(loadMessages, 500);
+        const aiMessage = await response.json();
+        setMessages((prev) => [...prev, aiMessage]);
       } else {
-        // Lidar com erro
+        console.error('Failed to send message');
       }
-    } catch {
-      // Lidar com erro
+    } catch (error) {
+      console.error('Error sending message:', error);
+    }
+  };
+
+  // Função para salvar a chave da API da OpenAI
+  const handleSaveApiKey = async () => {
+    const userId = localStorage.getItem('user_id');
+    if (!userId || !openaiApiKey.trim()) {
+      alert('Por favor, insira uma chave de API válida.');
+      return;
+    }
+
+    try {
+      const response = await fetch(`${BACKEND_URL}/users/${userId}/openai-key`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ openai_api_key: openaiApiKey }),
+      });
+
+      if (response.ok) {
+        alert('Chave de API da OpenAI salva com sucesso!');
+        setOpenaiApiKey('');
+      } else {
+        const errorData = await response.json();
+        alert(`Falha ao salvar a chave de API: ${errorData.detail || 'Erro desconhecido'}`);
+      }
+    } catch (error) {
+      console.error('Error saving API key:', error);
+      alert('Ocorreu um erro ao salvar a chave de API.');
     }
   };
 
@@ -122,6 +149,18 @@ export default function Chat() {
 
       <footer className="bg-white p-4 border-t shadow-inner">
         <div className="max-w-4xl mx-auto">
+          <div className="mb-4 flex items-center">
+            <input
+              type="password"
+              className="flex-grow border rounded-full py-3 px-5 mr-4 focus:outline-none focus:ring-2 focus:ring-green-600 shadow-sm"
+              placeholder="Insira sua chave de API da OpenAI"
+              value={openaiApiKey}
+              onChange={(e) => setOpenaiApiKey(e.target.value)}
+            />
+            <button onClick={handleSaveApiKey} className="bg-green-600 hover:bg-green-700 text-white font-bold p-3 rounded-full transition duration-300 ease-in-out shadow-lg">
+              Salvar Chave
+            </button>
+          </div>
           <form onSubmit={handleSendMessage} className="flex items-center">
             <input
               type="text"

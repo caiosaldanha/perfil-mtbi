@@ -176,6 +176,7 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, index=True, nullable=False)
     email = Column(String, unique=True, index=True, nullable=False)
+    openai_api_key = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
@@ -311,6 +312,9 @@ class TestResultSummary(BaseModel):
     id: int
     personality_type: str
     completed_at: datetime
+
+class UserOpenAIKeyUpdate(BaseModel):
+    openai_api_key: str
 
 # FastAPI app
 app = FastAPI(title="MTBI Personality Test API", version="1.0.0")
@@ -695,6 +699,20 @@ async def create_user(user: UserCreate, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="E-mail já cadastrado.")
     db.refresh(db_user)
     return db_user
+
+
+@app.put("/users/{user_id}/openai-key", response_model=UserResponse)
+async def update_user_openai_key(
+    user_id: int, 
+    key_update: UserOpenAIKeyUpdate, 
+    db: Session = Depends(get_db)
+):
+    """Update user's OpenAI API key"""
+    user = ensure_user_exists(db, user_id)
+    user.openai_api_key = key_update.openai_api_key
+    db.commit()
+    db.refresh(user)
+    return user
 
 
 @app.post("/test-session", response_model=TestSessionResponse)
