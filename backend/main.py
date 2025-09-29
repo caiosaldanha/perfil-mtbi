@@ -772,7 +772,7 @@ async def answer_test_question(
     db.commit()
     db.refresh(session_obj)
 
-    questions = get_ordered_questions(db)
+    # Use the previously fetched questions to avoid duplicate DB query
     return build_session_response(session_obj, questions)
 
 
