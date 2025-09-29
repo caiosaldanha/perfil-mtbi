@@ -642,23 +642,7 @@ def calculate_mtbi_type(
         elif trait_scores[secondary] > trait_scores[primary]:
             personality += secondary
         else:
-            # Tie-breaking rationale:
-            # When trait scores are equal, we deterministically select the primary trait (e.g., "E" over "I").
-            # This approach ensures that the personality type calculation always yields a result, avoiding
-            # ambiguity for users.
-            # The primary trait is chosen for consistency and reproducibility, as recommended in MBTI-like
-            # assessments when scores are tied.
-            # While this may not reflect a user's nuanced preferences, it is a common methodological practice to
-            # prevent indeterminate outcomes.
-            # Future improvements could include reporting ties or prompting users for additional input, but for
-            # now, this strategy maintains clarity and simplicity.
-            #
-            # Psychological rationale:
-            # 1. Consistency: Always choosing the same trait in case of ties ensures reproducible results
-            # 2. Methodological precedent: Many MBTI implementations use similar tie-breaking strategies
-            # 3. User experience: Providing a definitive result rather than "uncertain" maintains user confidence
-            # 4. Statistical validity: In large populations, ties are relatively rare, so this affects few users
-            # 5. Practical implementation: Deterministic choice prevents system errors or infinite loops
+            # Tie-break: deterministically select the primary trait for consistency and reproducibility.
             personality += primary
 
     return {
