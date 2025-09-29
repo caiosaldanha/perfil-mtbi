@@ -21,7 +21,7 @@ fi
 
 # Check Python syntax
 echo "✅ Validating Python code syntax..."
-if python3 -m py_compile backend/main.py frontend/app.py 2>/dev/null; then
+if python3 -m py_compile backend/main.py 2>/dev/null; then
     echo "✅ Python code syntax is valid"
 else
     echo "❌ Python code has syntax errors"
@@ -36,8 +36,9 @@ required_files=(
     "backend/main.py" 
     "backend/requirements.txt"
     "frontend/Dockerfile"
-    "frontend/app.py"
-    "frontend/requirements.txt"
+    "frontend/package.json"
+    "frontend/tsconfig.json"
+    "frontend/src/app/page.tsx"
     "database/init.sql"
     "README.md"
 )
@@ -58,6 +59,6 @@ echo "To start the application, run:"
 echo "  docker compose up --build"
 echo ""
 echo "Then access:"
-echo "  Frontend: http://localhost:5000"
+echo "  Frontend: http://localhost:3000"
 echo "  Backend API: http://localhost:8000"
 echo "  API Docs: http://localhost:8000/docs"
