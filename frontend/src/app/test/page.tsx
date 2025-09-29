@@ -178,8 +178,7 @@ function TestPageContent() {
   useEffect(() => {
     const restart = searchParams.get('restart') === 'true';
     startSession(restart);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [startSession, searchParams]);
 
   const [autoRestartRequested, setAutoRestartRequested] = useState(false);
 
