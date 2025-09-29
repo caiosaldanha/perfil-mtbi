@@ -47,7 +47,7 @@ export default function Chat() {
       } else {
         // Lidar com erro
       }
-    } catch (error) {
+    } catch {
       // Lidar com erro
     }
   }, [router]);
@@ -97,7 +97,7 @@ export default function Chat() {
       } else {
         // Lidar com erro
       }
-    } catch (error) {
+    } catch {
       // Lidar com erro
     }
   };

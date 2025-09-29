@@ -1,10 +1,12 @@
 import { NextResponse } from 'next/server';
+import { getBackendUrl } from '@/utils/backend';
 
 export async function POST(request: Request) {
   const { user_id, answers } = await request.json();
 
   try {
-    const backendResponse = await fetch(`${process.env.BACKEND_URL}/submit-test`, {
+    const backendUrl = getBackendUrl();
+    const backendResponse = await fetch(`${backendUrl}/submit-test`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -19,7 +21,8 @@ export async function POST(request: Request) {
       const errorData = await backendResponse.json();
       return NextResponse.json({ error: errorData.detail || 'Failed to submit test' }, { status: backendResponse.status });
     }
-  } catch {
-    return NextResponse.json({ error: 'An unexpected error occurred' }, { status: 500 });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'An unexpected error occurred';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
