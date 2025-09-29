@@ -175,27 +175,71 @@ function TestPageContent() {
     }
   }, [router]);
 
+  const handleManualRestart = useCallback(() => {
+    console.log('[TestPage] Reset manual iniciado pelo usuário');
+    setRestartAttempts(0);
+    setIsRestartBlocked(false);
+    setAutoRestartRequested(false);
+    setLastRestartTime(0);
+    startSession(true);
+  }, [startSession]);
+
   useEffect(() => {
     const restart = searchParams.get('restart') === 'true';
     startSession(restart);
   }, [startSession, searchParams]);
 
   const [autoRestartRequested, setAutoRestartRequested] = useState(false);
+  const [restartAttempts, setRestartAttempts] = useState(0);
+  const [isRestartBlocked, setIsRestartBlocked] = useState(false);
+  const [lastRestartTime, setLastRestartTime] = useState<number>(0);
+
+  const MAX_RESTART_ATTEMPTS = 3;
+  const INITIAL_BACKOFF_DELAY = 1000; // 1 segundo
 
   const isSessionInconsistent = !loading && session && session.status !== 'completed' && !session.question;
 
   useEffect(() => {
     if (session?.question || session?.status === 'completed') {
       setAutoRestartRequested(false);
+      setRestartAttempts(0);
+      setIsRestartBlocked(false);
+      setLastRestartTime(0);
     }
   }, [session?.question, session?.status]);
 
   useEffect(() => {
-    if (isSessionInconsistent && !autoRestartRequested) {
+    if (isSessionInconsistent && !autoRestartRequested && !isRestartBlocked) {
+      // Verificar se ainda temos tentativas disponíveis
+      if (restartAttempts >= MAX_RESTART_ATTEMPTS) {
+        console.warn(`[TestPage] Máximo de tentativas de restart atingido (${MAX_RESTART_ATTEMPTS}). Bloqueando restart automático.`);
+        setIsRestartBlocked(true);
+        return;
+      }
+
+      // Calcular delay baseado no número de tentativas (backoff exponencial)
+      const delay = INITIAL_BACKOFF_DELAY * Math.pow(2, restartAttempts);
+      const currentTime = Date.now();
+      
+      // Verificar se tempo suficiente passou desde última tentativa
+      if (currentTime - lastRestartTime < delay) {
+        return;
+      }
+
+      console.log(`[TestPage] Iniciando restart automático ${restartAttempts + 1}/${MAX_RESTART_ATTEMPTS} com delay de ${delay}ms`);
+      
       setAutoRestartRequested(true);
-      startSession(true);
+      setRestartAttempts(prev => prev + 1);
+      setLastRestartTime(currentTime);
+
+      // Aplicar delay antes do restart
+      const timeoutId = setTimeout(() => {
+        startSession(true);
+      }, delay);
+
+      return () => clearTimeout(timeoutId);
     }
-  }, [isSessionInconsistent, autoRestartRequested, startSession]);
+  }, [isSessionInconsistent, autoRestartRequested, isRestartBlocked, restartAttempts, lastRestartTime, startSession]);
 
   useEffect(() => {
     if (session?.status === 'completed' && session.personality_type) {
@@ -430,17 +474,76 @@ function TestPageContent() {
                   </div>
                 ) : isSessionInconsistent ? (
                   <div className="mt-6 space-y-4 text-center">
-                    <p className="text-lg text-gray-700">
-                      Não conseguimos carregar a próxima pergunta. Estamos preparando um novo teste para você.
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => startSession(true)}
-                      disabled={loading || isSubmitting}
-                      className="rounded-full bg-blue-600 px-6 py-2 font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-400"
-                    >
-                      Tentar novamente agora
-                    </button>
+                    {isRestartBlocked ? (
+                      <div className="space-y-4">
+                        <div className="rounded-lg bg-red-50 border border-red-200 p-4">
+                          <div className="flex items-center">
+                            <div className="flex-shrink-0">
+                              <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" />
+                              </svg>
+                            </div>
+                            <div className="ml-3 text-left">
+                              <h3 className="text-sm font-medium text-red-800">
+                                Problema persistente detectado
+                              </h3>
+                              <div className="mt-2 text-sm text-red-700">
+                                <p>
+                                  Tentativas automáticas de reinício esgotadas ({MAX_RESTART_ATTEMPTS}/3).
+                                  Isso pode indicar um problema temporário no servidor.
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="space-y-3">
+                          <p className="text-lg font-medium text-gray-900">
+                            O que você pode fazer:
+                          </p>
+                          <div className="space-y-2">
+                            <button
+                              type="button"
+                              onClick={handleManualRestart}
+                              disabled={loading || isSubmitting}
+                              className="w-full rounded-full bg-blue-600 px-6 py-3 font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-400"
+                            >
+                              🔄 Forçar reinício do teste
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => window.location.reload()}
+                              className="w-full rounded-full border border-gray-300 px-6 py-3 font-semibold text-gray-700 transition hover:bg-gray-50"
+                            >
+                              🔃 Recarregar página
+                            </button>
+                            <p className="text-sm text-gray-500 mt-2">
+                              Se o problema persistir, tente novamente em alguns minutos ou entre em contato conosco.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-center space-x-2">
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                          <p className="text-lg text-gray-700">
+                            Preparando novo teste automaticamente...
+                          </p>
+                        </div>
+                        <p className="text-sm text-gray-500">
+                          Tentativa {restartAttempts + 1} de {MAX_RESTART_ATTEMPTS}
+                          {restartAttempts > 0 && ` (aguardando ${INITIAL_BACKOFF_DELAY * Math.pow(2, restartAttempts)}ms)`}
+                        </p>
+                        <button
+                          type="button"
+                          onClick={handleManualRestart}
+                          disabled={loading || isSubmitting}
+                          className="rounded-full border border-blue-600 px-6 py-2 font-semibold text-blue-600 transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:border-gray-300 disabled:text-gray-400"
+                        >
+                          Tentar agora
+                        </button>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div className="mt-6 text-center">
