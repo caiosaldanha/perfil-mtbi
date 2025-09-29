@@ -20,9 +20,15 @@ from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.exc import IntegrityError, OperationalError
 from datetime import datetime
 import json
+from functools import lru_cache
+from threading import Lock
 
 # Database setup
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://mtbi_user:mtbi_password@localhost:5432/mtbi_db")
+
+# Performance optimization - JSON parsing cache
+_json_cache = {}
+_cache_lock = Lock()
 
 def create_db_engine():
     """Create database engine with retry logic"""
@@ -319,34 +325,54 @@ app.add_middleware(
 )
 
 def verify_and_update_schema(db_session: Session) -> None:
-    """Verify database schema matches models and apply necessary migrations."""
+    """
+    Verify database schema matches models and apply necessary migrations.
+    
+    This system supports multiple schema changes through a generic migration framework.
+    Each migration is defined with check_query, migration_query, and description.
+    """
     print("Checking database schema alignment...")
     
-    # Check if test_result_id column exists in test_sessions table
-    try:
-        # Simple test query to check if column exists
-        db_session.execute(text("SELECT test_result_id FROM test_sessions LIMIT 1"))
-        print("✓ test_sessions.test_result_id column verified")
-    except Exception as e:
-        if "does not exist" in str(e):
-            print("⚠ Missing test_result_id column, applying migration...")
-            # Rollback any failed transaction first
-            db_session.rollback()
-            try:
-                # Add the missing column with foreign key constraint
-                db_session.execute(text(
-                    "ALTER TABLE test_sessions ADD COLUMN test_result_id INTEGER REFERENCES test_results(id) ON DELETE SET NULL"
-                ))
-                db_session.commit()
-                print("✓ Successfully added test_result_id column to test_sessions")
-            except Exception as migration_error:
-                print(f"✗ Failed to add test_result_id column: {migration_error}")
+    # Define migrations as a list of dicts with 'check_query', 'migration_query', and 'description'
+    migrations = [
+        {
+            "description": "test_sessions.test_result_id column",
+            "check_query": "SELECT test_result_id FROM test_sessions LIMIT 1",
+            "migration_query": "ALTER TABLE test_sessions ADD COLUMN test_result_id INTEGER REFERENCES test_results(id) ON DELETE SET NULL",
+            "missing_error": "does not exist",
+        },
+        # Add future migrations here as needed
+        # Example:
+        # {
+        #     "description": "users.email_verified column",
+        #     "check_query": "SELECT email_verified FROM users LIMIT 1",
+        #     "migration_query": "ALTER TABLE users ADD COLUMN email_verified BOOLEAN DEFAULT FALSE",
+        #     "missing_error": "does not exist",
+        # },
+    ]
+    
+    # Execute migrations sequentially
+    for migration in migrations:
+        try:
+            # Try to execute the check query
+            db_session.execute(text(migration["check_query"]))
+            print(f"✓ {migration['description']} verified")
+        except Exception as e:
+            if migration["missing_error"] in str(e):
+                print(f"⚠ Missing {migration['description']}, applying migration...")
+                db_session.rollback()
+                try:
+                    db_session.execute(text(migration["migration_query"]))
+                    db_session.commit()
+                    print(f"✓ Successfully applied migration for {migration['description']}")
+                except Exception as migration_error:
+                    print(f"✗ Failed to apply migration for {migration['description']}: {migration_error}")
+                    db_session.rollback()
+                    raise
+            else:
+                print(f"✗ Schema verification failed for {migration['description']}: {e}")
                 db_session.rollback()
                 raise
-        else:
-            print(f"✗ Schema verification failed: {e}")
-            db_session.rollback()
-            raise
 
 
 @app.on_event("startup")
@@ -406,22 +432,63 @@ def seed_questions(session: Session) -> None:
 
 
 def load_json_array(raw: Optional[str]) -> List[Any]:
+    """
+    Load and parse JSON array with caching for performance optimization.
+    
+    Reduces JSON parsing overhead when the same data is accessed frequently
+    across multiple API endpoints.
+    """
     if not raw:
         return []
+    
+    # Use thread-safe cache for frequently accessed JSON data
+    cache_key = hash(raw)
+    with _cache_lock:
+        if cache_key in _json_cache:
+            return _json_cache[cache_key]
+    
     try:
         data = json.loads(raw)
         if isinstance(data, list):
+            # Cache successful parse results (limit cache size to prevent memory issues)
+            with _cache_lock:
+                if len(_json_cache) < 1000:  # Prevent unlimited cache growth
+                    _json_cache[cache_key] = data
             return data
     except json.JSONDecodeError:
         pass
     return []
 
 
+# Performance optimization - Questions cache
+_questions_cache = None
+_questions_cache_time = 0
+_questions_cache_ttl = 300  # 5 minutes TTL
+
 def get_ordered_questions(db: Session) -> List[Question]:
-    questions = db.query(Question).order_by(Question.id).all()
-    if not questions:
-        raise HTTPException(status_code=400, detail="Questionário indisponível. Consulte o administrador.")
-    return questions
+    """
+    Get ordered questions with caching for performance optimization.
+    
+    Questions are cached since they rarely change and are accessed frequently.
+    Cache has a 5-minute TTL to balance performance with data freshness.
+    """
+    global _questions_cache, _questions_cache_time
+    
+    current_time = time.time()
+    
+    # Check if cache is valid
+    if (_questions_cache is None or 
+        current_time - _questions_cache_time > _questions_cache_ttl):
+        
+        questions = db.query(Question).order_by(Question.id).all()
+        if not questions:
+            raise HTTPException(status_code=400, detail="Questionário indisponível. Consulte o administrador.")
+        
+        # Update cache
+        _questions_cache = questions
+        _questions_cache_time = current_time
+    
+    return _questions_cache
 
 
 def ensure_user_exists(db: Session, user_id: int) -> User:
@@ -575,7 +642,23 @@ def calculate_mtbi_type(
         elif trait_scores[secondary] > trait_scores[primary]:
             personality += secondary
         else:
-            # Resolve ties deterministically using the primary trait.
+            # Tie-breaking rationale:
+            # When trait scores are equal, we deterministically select the primary trait (e.g., "E" over "I").
+            # This approach ensures that the personality type calculation always yields a result, avoiding
+            # ambiguity for users.
+            # The primary trait is chosen for consistency and reproducibility, as recommended in MBTI-like
+            # assessments when scores are tied.
+            # While this may not reflect a user's nuanced preferences, it is a common methodological practice to
+            # prevent indeterminate outcomes.
+            # Future improvements could include reporting ties or prompting users for additional input, but for
+            # now, this strategy maintains clarity and simplicity.
+            #
+            # Psychological rationale:
+            # 1. Consistency: Always choosing the same trait in case of ties ensures reproducible results
+            # 2. Methodological precedent: Many MBTI implementations use similar tie-breaking strategies
+            # 3. User experience: Providing a definitive result rather than "uncertain" maintains user confidence
+            # 4. Statistical validity: In large populations, ties are relatively rare, so this affects few users
+            # 5. Practical implementation: Deterministic choice prevents system errors or infinite loops
             personality += primary
 
     return {
