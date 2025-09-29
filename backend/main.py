@@ -21,14 +21,10 @@ from sqlalchemy.exc import IntegrityError, OperationalError
 from datetime import datetime
 import json
 from functools import lru_cache
-from threading import Lock
+import threading
 
 # Database setup
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://mtbi_user:mtbi_password@localhost:5432/mtbi_db")
-
-# Performance optimization - JSON parsing cache
-_json_cache = {}
-_cache_lock = Lock()
 
 def create_db_engine():
     """Create database engine with retry logic"""
@@ -431,64 +427,71 @@ def seed_questions(session: Session) -> None:
         session.commit()
 
 
+@lru_cache(maxsize=1000)
+def _parse_json_cached(raw_str: str) -> tuple:
+    """
+    Thread-safe JSON parsing with LRU cache.
+    
+    Returns a tuple to be JSON-serializable for caching.
+    Uses functools.lru_cache which is thread-safe and handles memory management automatically.
+    """
+    try:
+        data = json.loads(raw_str)
+        if isinstance(data, list):
+            return tuple(data)  # Convert to tuple for caching
+    except json.JSONDecodeError:
+        pass
+    return ()
+
 def load_json_array(raw: Optional[str]) -> List[Any]:
     """
-    Load and parse JSON array with caching for performance optimization.
+    Load and parse JSON array with thread-safe caching for performance optimization.
     
-    Reduces JSON parsing overhead when the same data is accessed frequently
-    across multiple API endpoints.
+    Uses functools.lru_cache internally to provide thread-safe caching with automatic
+    memory management and bounded cache size to prevent memory leaks.
     """
     if not raw:
         return []
     
-    # Use thread-safe cache for frequently accessed JSON data
-    cache_key = hash(raw)
-    with _cache_lock:
-        if cache_key in _json_cache:
-            return _json_cache[cache_key]
-    
-    try:
-        data = json.loads(raw)
-        if isinstance(data, list):
-            # Cache successful parse results (limit cache size to prevent memory issues)
-            with _cache_lock:
-                if len(_json_cache) < 1000:  # Prevent unlimited cache growth
-                    _json_cache[cache_key] = data
-            return data
-    except json.JSONDecodeError:
-        pass
-    return []
+    # Use thread-safe cached function
+    cached_result = _parse_json_cached(raw)
+    return list(cached_result) if cached_result else []
 
 
-# Performance optimization - Questions cache
+# Performance optimization - Thread-safe questions cache
 _questions_cache = None
 _questions_cache_time = 0
 _questions_cache_ttl = 300  # 5 minutes TTL
+_questions_cache_lock = threading.RLock()
 
 def get_ordered_questions(db: Session) -> List[Question]:
     """
-    Get ordered questions with caching for performance optimization.
+    Get ordered questions with thread-safe caching for performance optimization.
     
     Questions are cached since they rarely change and are accessed frequently.
     Cache has a 5-minute TTL to balance performance with data freshness.
+    Uses RLock to prevent race conditions in multi-threaded web server environment.
     """
     global _questions_cache, _questions_cache_time
     
     current_time = time.time()
     
-    # Check if cache is valid
-    if (_questions_cache is None or 
-        current_time - _questions_cache_time > _questions_cache_ttl):
+    # Thread-safe cache check and update
+    with _questions_cache_lock:
+        # Check if cache is valid
+        if (_questions_cache is None or 
+            current_time - _questions_cache_time > _questions_cache_ttl):
+            
+            questions = db.query(Question).order_by(Question.id).all()
+            if not questions:
+                raise HTTPException(status_code=400, detail="Questionário indisponível. Consulte o administrador.")
+            
+            # Update cache atomically
+            _questions_cache = questions
+            _questions_cache_time = current_time
         
-        questions = db.query(Question).order_by(Question.id).all()
-        if not questions:
-            raise HTTPException(status_code=400, detail="Questionário indisponível. Consulte o administrador.")
-        
-        # Update cache
-        _questions_cache = questions
-        _questions_cache_time = current_time
-    
-    return _questions_cache
+        # Return cached questions (still within lock to ensure consistency)
+        return _questions_cache
 
 
 def ensure_user_exists(db: Session, user_id: int) -> User:
