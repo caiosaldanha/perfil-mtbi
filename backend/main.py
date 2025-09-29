@@ -778,7 +778,7 @@ async def answer_test_question(
 
 @app.post("/test-session/{session_id}/rewind", response_model=TestSessionResponse)
 async def rewind_last_answer(session_id: int, db: Session = Depends(get_db)):
-    """Undo the last answer, allowing the user to revisar a pergunta."""
+    """Undo the last answer, allowing the user to review a question."""
 
     session_obj = get_session_or_404(db, session_id)
     if session_obj.status != "in_progress":
