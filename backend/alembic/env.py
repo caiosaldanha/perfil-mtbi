@@ -8,7 +8,7 @@ import sys
 # Add the parent directory to Python path so we can import our models
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from main import Base, User, Question, TestSession, TestResult, Answer
+from main import Base, User, Question, TestSession, TestResult, ChatMessage
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

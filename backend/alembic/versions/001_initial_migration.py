@@ -83,23 +83,9 @@ def upgrade() -> None:
     op.create_index(op.f('ix_test_sessions_id'), 'test_sessions', ['id'], unique=False)
     op.create_index(op.f('ix_test_sessions_user_id'), 'test_sessions', ['user_id'], unique=False)
 
-    # Create answers table (if it exists in the original schema)
-    op.create_table('answers',
-        sa.Column('id', sa.Integer(), nullable=False),
-        sa.Column('test_result_id', sa.Integer(), nullable=False),
-        sa.Column('question_id', sa.Integer(), nullable=False),
-        sa.Column('answer', sa.Integer(), nullable=False),
-        sa.ForeignKeyConstraint(['question_id'], ['questions.id'], ),
-        sa.ForeignKeyConstraint(['test_result_id'], ['test_results.id'], ),
-        sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index(op.f('ix_answers_id'), 'answers', ['id'], unique=False)
-
 
 def downgrade() -> None:
     # Drop tables in reverse order
-    op.drop_index(op.f('ix_answers_id'), table_name='answers')
-    op.drop_table('answers')
     op.drop_index(op.f('ix_test_sessions_user_id'), table_name='test_sessions')
     op.drop_index(op.f('ix_test_sessions_id'), table_name='test_sessions')
     op.drop_table('test_sessions')
